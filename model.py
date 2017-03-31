@@ -18,7 +18,7 @@ def config():
 
 
 @ingredients.capture
-def get(build_func, summary, path, *args, **kwargs):
+def get(build_func, summary, path=None, *args, **kwargs):
     if build_func and not path:
         model = build_func(*args, **kwargs)
     else:
