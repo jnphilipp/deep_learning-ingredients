@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from ingredients import models
+from ingredients import model
 from sacred import Ingredient
-ingredients = Ingredient('experiment', ingredients=[models.ingredients])
+ingredients = Ingredient('experiment', ingredients=[model.ingredients])
 
 
 import os
@@ -21,8 +21,8 @@ def config():
 def save(path, model, train_history=None):
     try:
         for m in model:
-            models.save(path, m, m.name)
+            model.save(path, m, m.name)
     except TypeError:
-        models.save(path, model)
+        model.save(path, model)
     if train_history:
         history.save(path, 'train_history', train_history)

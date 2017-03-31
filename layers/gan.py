@@ -10,7 +10,7 @@ from ingredients.layers import densely, ingredients
 @ingredients.config
 def config():
     discriminator = {'bn_config': {'axis': 1},
-                    'conv_config': {'kernel_size': (3, 3),
+                    'conv2d_config': {'kernel_size': (3, 3),
                                     'padding': 'same'
                     }
     }
@@ -41,11 +41,11 @@ def build_generator(nb_classes, latent_shape, blocks, embedding_config, dropout,
 
 
 @ingredients.capture(prefix='discriminator')
-def build_discriminator(nb_classes, input_shape, filters, blocks, bn_config, conv_config, activation, loss, optimizer, metrics):
+def build_discriminator(nb_classes, input_shape, filters, blocks, bn_config, conv2d_config, activation, loss, optimizer, metrics):
     print('Building discriminator...')
 
     input_image = Input(shape=input_shape, name='input_image')
-    x = Conv2D.from_config({**conv_config, **{'filters': filters}})(input_image)
+    x = Conv2D.from_config({**conv2d_config, **{'filters': filters}})(input_image)
     x = BatchNormalization.from_config(bn_config)(x)
     x = Activation(activation)(x)
 

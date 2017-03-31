@@ -7,6 +7,7 @@ ingredients = Ingredient('data')
 import os
 
 from ingredients import PROJECT_DIR
+from . import h5py
 from . import images
 
 
