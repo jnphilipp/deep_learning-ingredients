@@ -18,7 +18,7 @@ def config():
 
 
 @ingredients.capture
-def save(path, model, train_history=None):
+def save(path, m, train_history=None):
     try:
         for m in model:
             model.save(path, m, m.name)
