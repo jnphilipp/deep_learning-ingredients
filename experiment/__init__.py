@@ -23,6 +23,6 @@ def save(path, m, train_history=None):
         for m in model:
             model.save(path, m, m.name)
     except TypeError:
-        model.save(path, model)
+        model.save(path, m)
     if train_history:
         history.save(path, 'train_history', train_history)
