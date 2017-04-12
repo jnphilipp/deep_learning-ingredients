@@ -45,12 +45,18 @@ def build_discriminator(nb_classes, input_shape, filters, blocks, bn_config, con
     print('Building discriminator...')
 
     input_image = Input(shape=input_shape, name='input_image')
-    x = Conv2D.from_config({**conv2d_config, **{'filters': filters}})(input_image)
-    x = BatchNormalization.from_config(bn_config)(x)
-    x = Activation(activation)(x)
+    if bn_config:
+        x = Conv2D.from_config({**conv2d_config, **{'filters': filters}})(input_image)
+        x = BatchNormalization.from_config(bn_config)(x)
+        x = Activation(activation)(x)
+    else:
+        x = Conv2D.from_config({**conv2d_config, **{'filters': filters, 'activation': activation}})(input_image)
 
     for i in range(blocks):
-        x, filters = densely.block2d_bn(x, filters, pool=i != blocks - 1)
+        if bn_config:
+            x, filters = densely.block2d_bn(x, filters, pool=i != blocks - 1)
+        else:
+            x, filters = densely.block2d(x, filters, pool=i != blocks - 1)
 
     # fake
     f = Conv2D(1, (4, 4))(x)
