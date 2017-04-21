@@ -33,4 +33,5 @@ def split(X, y, validation_split):
     if len(set([x.shape for x in y_val])) <= 1:
         y_val = np.asarray(y_val)
 
+    print('Train on %d samples, validate on %d samples.' % (len(X_train), len(X_val)))
     return X_train, y_train, X_val, y_val
