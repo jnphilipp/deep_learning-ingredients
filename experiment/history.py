@@ -4,7 +4,6 @@ import json
 import os
 
 from ingredients.experiment import ingredients
-import matplotlib.pyplot as plt
 
 
 @ingredients.capture
@@ -22,6 +21,8 @@ def save(path, name, history):
 
 @ingredients.capture
 def plot(path, name='train_history'):
+    import matplotlib.pyplot as plt
+
     fig = plt.figure(figsize=(19.2, 10.8), dpi=100)
     fig.suptitle(name, family='monospace', fontsize=20)
     ax1 = fig.add_subplot(111)
