@@ -3,7 +3,6 @@
 import os
 import sys
 
-from json import dumps
 from keras.models import load_model
 from keras.utils import plot_model
 from sacred import Ingredient
@@ -36,14 +35,21 @@ def load(path):
 
 @ingredients.capture
 def save(path, model, name=None):
-    with open(os.path.join(path, '%s.json' % (name if name else 'model')), 'w', encoding='utf8') as f:
+    with open(os.path.join(path, '%s.json' % (name if name else 'model')),
+              'w', encoding='utf8') as f:
         f.write(model.to_json())
         f.write('\n')
 
     stdout = sys.stdout
-    with open(os.path.join(path, '%ssummary' % ('%s_' % name if name else '')), 'w', encoding='utf8') as f:
+    with open(os.path.join(path, '%ssummary' % ('%s_' % name if name else '')),
+              'w', encoding='utf8') as f:
         sys.stdout = f
         model.summary()
     sys.stdout = stdout
 
     model.save(os.path.join(path, '%s.h5' % (name if name else 'model')))
+
+
+@ingredients.capture
+def plot(model, path, name='model'):
+    plot_model(model, to_file=os.path.join(path, '%s.png' % name))
