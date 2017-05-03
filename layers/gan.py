@@ -5,11 +5,12 @@ from keras.layers import (multiply, Activation, BatchNormalization, Conv2D,
                           Embedding, Flatten, Input, Reshape, SpatialDropout1D)
 from keras.models import Model
 from keras.optimizers import deserialize
-from ingredients.layers import densely, ingredients
+from ingredients.layers import cnn, densely, ingredients
 
 
 @ingredients.config
 def config():
+    generator = {'net_type': 'densely'}
     discriminator = {
         'bn_config': {'axis': 1},
         'conv2d_config': {
@@ -22,7 +23,9 @@ def config():
 
 @ingredients.capture(prefix='generator')
 def build_generator(nb_classes, latent_shape, blocks, embedding_config,
-                    dropout, loss, optimizer, metrics):
+                    dropout, net_type, loss, optimizer, metrics, N=None, filters=None):
+    assert net_type in ['cnn', 'densely']
+
     print('Building generator...')
 
     input_class = Input(shape=(1, ), name='input_class')
@@ -35,9 +38,20 @@ def build_generator(nb_classes, latent_shape, blocks, embedding_config,
     input_latent = Input(shape=latent_shape, name='input_latent')
     x = multiply([x, input_latent])
 
-    filters = latent_shape[0 if K.image_data_format() == "channels_first" else -1]
-    for i in range(blocks):
-        x, filters = densely.upblock2d(x, filters, transpose=i != blocks - 1)
+    if net_type == 'cnn':
+        for i in range(blocks):
+            if N and filters:
+                x = cnn.upblock2d(x, N=N, filters=filters, transpose=i != blocks - 1)
+            elif N and not filters:
+                x = cnn.upblock2d(x, N=N, transpose=i != blocks - 1)
+            elif not N and filters:
+                x = cnn.upblock2d(x, filters=filters, transpose=i != blocks - 1)
+            else:
+                x = cnn.upblock2d(x, transpose=i != blocks - 1)
+    elif net_type == 'densely':
+        filters = latent_shape[0 if K.image_data_format() == "channels_first" else -1]
+        for i in range(blocks):
+            x, filters = densely.upblock2d(x, filters, transpose=i != blocks - 1)
     img = Conv2D(3, (1, 1), activation='tanh', padding='same')(x)
 
     # Model

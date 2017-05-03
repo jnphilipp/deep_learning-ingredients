@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from keras.layers import concatenate, Activation, BatchNormalization, Conv1D, Conv2D, Conv2DTranspose
+from keras.layers import (concatenate, Activation, BatchNormalization, Conv1D,
+                          Conv2D, Conv2DTranspose)
 from ingredients.layers import ingredients
 
 
@@ -10,17 +11,21 @@ def config():
     k = 12
     bottleneck = 4
     bn_config = {'axis': 1}
-    bottleneck1d_config = {'kernel_size': 1,
-                    'padding': 'same'
+    bottleneck1d_config = {
+        'kernel_size': 1,
+        'padding': 'same'
     }
-    bottleneck2d_config = {'kernel_size': (1, 1),
-                    'padding': 'same'
+    bottleneck2d_config = {
+        'kernel_size': (1, 1),
+        'padding': 'same'
     }
-    conv1d_config = {'kernel_size': 3,
-                    'padding': 'same'
+    conv1d_config = {
+        'kernel_size': 3,
+        'padding': 'same'
     }
-    conv2d_config = {'kernel_size': (3, 3),
-                    'padding': 'same'
+    conv2d_config = {
+        'kernel_size': (3, 3),
+        'padding': 'same'
     }
     strides = (2, 2)
     activation = 'tanh'
@@ -29,12 +34,14 @@ def config():
 
 
 @ingredients.capture
-def conv1d_bn(x, k, bottleneck, bn_config, bottleneck1d_config, conv1d_config, activation):
+def conv1d_bn(x, k, bottleneck, bn_config, bottleneck1d_config, conv1d_config,
+              activation):
     if bottleneck:
-        x = Conv1D.from_config({**bottleneck1d_config, **{'filters': bottleneck * k}})(x)
+        x = Conv1D.from_config(dict(bottleneck1d_config,
+                                    **{'filters': bottleneck * k}))(x)
         x = BatchNormalization.from_config(bn_config)(x)
         x = Activation(activation)(x)
-    x = Conv1D.from_config({**conv1d_config, **{'filters': k}})(x)
+    x = Conv1D.from_config(dict(conv1d_config, **{'filters': k}))(x)
     x = BatchNormalization.from_config(bn_config)(x)
     return Activation(activation)(x)
 
@@ -42,23 +49,30 @@ def conv1d_bn(x, k, bottleneck, bn_config, bottleneck1d_config, conv1d_config, a
 @ingredients.capture
 def conv2d(x, k, bottleneck, bottleneck2d_config, conv2d_config, activation):
     if bottleneck:
-        x = Conv2D.from_config({**bottleneck2d_config, **{'filters': bottleneck * k, 'activation': activation}})(x)
-    return Conv2D.from_config({**conv2d_config, **{'filters': k, 'activation': activation}})(x)
+        x = Conv2D.from_config(dict(bottleneck2d_config,
+                                    **{'filters': bottleneck * k,
+                                       'activation': activation}))(x)
+    return Conv2D.from_config(dict(conv2d_config,
+                                   **{'filters': k,
+                                      'activation': activation}))(x)
 
 
 @ingredients.capture
-def conv2d_bn(x, k, bottleneck, bn_config, bottleneck2d_config, conv2d_config, activation):
+def conv2d_bn(x, k, bottleneck, bn_config, bottleneck2d_config, conv2d_config,
+              activation):
     if bottleneck:
-        x = Conv2D.from_config({**bottleneck2d_config, **{'filters': bottleneck * k}})(x)
+        x = Conv2D.from_config(dict(bottleneck2d_config,
+                                    **{'filters': bottleneck * k}))(x)
         x = BatchNormalization.from_config(bn_config)(x)
         x = Activation(activation)(x)
-    x = Conv2D.from_config({**conv2d_config, **{'filters': k}})(x)
+    x = Conv2D.from_config(dict(conv2d_config, **{'filters': k}))(x)
     x = BatchNormalization.from_config(bn_config)(x)
     return Activation(activation)(x)
 
 
 @ingredients.capture
-def block2d(inputs, filters, N, k, bottleneck, bottleneck2d_config, conv2d_config, activation, strides, theta, pool, concat_axis):
+def block2d(inputs, filters, N, k, bottleneck, bottleneck2d_config, conv2d_config,
+            activation, strides, theta, pool, concat_axis):
     convs = []
     for j in range(N):
         filters += k
@@ -68,14 +82,20 @@ def block2d(inputs, filters, N, k, bottleneck, bottleneck2d_config, conv2d_confi
     if pool:
         filters = int(filters * theta)
         if bottleneck:
-            x = Conv2D.from_config({**bottleneck2d_config, **{'filters': filters, 'activation': activation}})(x)
-        return Conv2D.from_config({**conv2d_config, **{'filters': filters, 'strides': strides, 'activation': activation}})(x), filters
+            x = Conv2D.from_config(dict(bottleneck2d_config,
+                                        **{'filters': filters,
+                                           'activation': activation}))(x)
+        return Conv2D.from_config(dict(conv2d_config,
+                                       **{'filters': filters,
+                                          'strides': strides,
+                                          'activation': activation}))(x), filters
     else:
         return x, filters
 
 
 @ingredients.capture
-def block2d_bn(inputs, filters, N, k, bottleneck, bn_config, bottleneck2d_config, conv2d_config, activation, strides, theta, pool, concat_axis):
+def block2d_bn(inputs, filters, N, k, bottleneck, bn_config, bottleneck2d_config,
+               conv2d_config, activation, strides, theta, pool, concat_axis):
     convs = []
     for j in range(N):
         filters += k
@@ -85,10 +105,13 @@ def block2d_bn(inputs, filters, N, k, bottleneck, bn_config, bottleneck2d_config
     if pool:
         filters = int(filters * theta)
         if bottleneck:
-            x = Conv2D.from_config({**bottleneck2d_config, **{'filters': filters}})(x)
+            x = Conv2D.from_config(dict(bottleneck2d_config,
+                                        **{'filters': filters}))(x)
             x = BatchNormalization.from_config(bn_config)(x)
             x = Activation(activation)(x)
-        x = Conv2D.from_config({**conv2d_config, **{'filters': filters, 'strides': strides}})(x)
+        x = Conv2D.from_config(dict(conv2d_config,
+                                    **{'filters': filters,
+                                       'strides': strides}))(x)
         x = BatchNormalization.from_config(bn_config)(x)
         return Activation(activation)(x), filters
     else:
@@ -96,7 +119,8 @@ def block2d_bn(inputs, filters, N, k, bottleneck, bn_config, bottleneck2d_config
 
 
 @ingredients.capture
-def upblock2d(inputs, filters, N, k, bottleneck, bottleneck2d_config, conv2d_config, activation, strides, theta, transpose):
+def upblock2d(inputs, filters, N, k, bottleneck, bottleneck2d_config, conv2d_config,
+              activation, strides, theta, transpose):
     convs = []
     for j in range(N):
         filters += k
@@ -106,7 +130,13 @@ def upblock2d(inputs, filters, N, k, bottleneck, bottleneck2d_config, conv2d_con
     if transpose:
         filters = int(filters * theta)
         if bottleneck:
-            x = Conv2D.from_config({**bottleneck2d_config, **{'filters': filters, 'activation': activation}})(x)
-        return Conv2DTranspose.from_config({**conv2d_config, **{'filters': filters, 'strides': strides, 'activation': activation}})(x), filters
+            x = Conv2D.from_config(dict(bottleneck2d_config,
+                                        **{'filters': filters,
+                                           'activation': activation}))(x)
+        return (Conv2DTranspose.from_config(dict(conv2d_config,
+                                                 **{'filters': filters,
+                                                    'strides': strides,
+                                                    'activation': activation}))(x),
+                filters)
     else:
         return x, filters
