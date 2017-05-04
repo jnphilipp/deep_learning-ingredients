@@ -18,11 +18,11 @@ def config():
 
 
 @ingredients.capture
-def save(path, m, train_history=None):
+def save(path, models, train_history=None):
     try:
-        for m in model:
+        for m in models:
             model.save(path, m, m.name)
     except TypeError:
-        model.save(path, m)
+        model.save(path, models)
     if train_history:
         history.save(path, 'train_history', train_history)
