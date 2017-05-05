@@ -37,6 +37,7 @@ def load(path):
         print('Loading model [%s]...' % ', '.join(path))
         for p in path:
             models.append(load_model(p))
+        return models
 
 
 @ingredients.capture
