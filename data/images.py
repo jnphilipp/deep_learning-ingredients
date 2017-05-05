@@ -23,13 +23,16 @@ def load(DATASETS_DIR, dataset, which_set, ext, grayscale):
     classes = {}
     nb_classes = 0
     if os.path.exists(os.path.join(DATASETS_DIR, dataset, which_set, 'classes.csv')):
-        with open(os.path.join(DATASETS_DIR, dataset, which_set, 'classes.csv'), 'r', encoding='utf8') as f:
+        with open(os.path.join(DATASETS_DIR, dataset, which_set, 'classes.csv'),
+                  'r', encoding='utf8') as f:
             reader = DictReader(f)
             for row in reader:
-                classes[row['image']] = [int(c) for c in row['class'].split(',')] if ',' in row['class'] else [int(row['class'])]
+                classes[row['image']] = [int(c) for c in row['class'].split(',')] \
+                    if ',' in row['class'] else [int(row['class'])]
         nb_classes = len(set([c for img in classes.values() for c in img]))
     else:
-        for e in sorted(os.scandir(os.path.join(DATASETS_DIR, dataset, which_set)), key=lambda e: e.name):
+        for e in sorted(os.scandir(os.path.join(DATASETS_DIR, dataset, which_set)),
+                        key=lambda e: e.name):
             if e.is_dir():
                 for p in list_pictures(e.path):
                     classes[os.path.basename(p)] = [nb_classes]
@@ -38,7 +41,8 @@ def load(DATASETS_DIR, dataset, which_set, ext, grayscale):
     X = []
     y = []
     names = []
-    for picture in sorted(list_pictures(os.path.join(DATASETS_DIR, dataset, which_set), ext=ext)):
+    for picture in sorted(list_pictures(os.path.join(DATASETS_DIR,
+                                        dataset, which_set), ext=ext)):
         X.append(img_to_array(load_img(picture, grayscale)))
         names.append(os.path.basename(picture))
         if os.path.basename(picture) in classes:
@@ -62,9 +66,15 @@ def load(DATASETS_DIR, dataset, which_set, ext, grayscale):
 
 @ingredients.capture
 def patch(x, height, width):
-    top_left_x = np.random.randint(0, x.shape[1 if K.image_data_format() == 'channels_first' else 0] - height) if x.shape[1 if K.image_data_format() == 'channels_first' else 0] > height else 0
-    top_left_y = np.random.randint(0, x.shape[2 if K.image_data_format() == 'channels_first' else 1] - width) if x.shape[2 if K.image_data_format() == 'channels_first' else 1] > width else 0
+    r = x.shape[1 if K.image_data_format() == 'channels_first' else 0]
+    c = x.shape[2 if K.image_data_format() == 'channels_first' else 1]
+    top_left_x = np.random.randint(0, r - height) if r > height else 0
+    top_left_y = np.random.randint(0, c - width) if c > width else 0
     if K.image_data_format() == 'channels_first':
-        return x[0:x.shape[0], top_left_x:top_left_x + height, top_left_y:top_left_y + width]
+        return x[0:x.shape[0],
+                 top_left_x:top_left_x + height,
+                 top_left_y:top_left_y + width]
     else:
-        return x[top_left_x:top_left_x + height, top_left_y:top_left_y + width, 0:x.shape[2]]
+        return x[top_left_x:top_left_x + height,
+                 top_left_y:top_left_y + width,
+                 0:x.shape[2]]
