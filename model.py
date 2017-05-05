@@ -29,8 +29,14 @@ def get(build_func, summary, path=None, *args, **kwargs):
 
 @ingredients.capture
 def load(path):
-    print('Loading model [%s]...' % path)
-    return load_model(path)
+    if isinstance(path, str):
+        print('Loading model [%s]...' % path)
+        return load_model(path)
+    else:
+        models = []
+        print('Loading model [%s]...' % ', '.join(path))
+        for p in path:
+            models.append(load_model(p))
 
 
 @ingredients.capture
