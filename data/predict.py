@@ -15,9 +15,14 @@ from utils.images import offset
 def image(model, image, batch_size, overlap, metrics):
     (input_r, input_c, image_r, image_c, diff_r, diff_c,
         offset_r, offset_c) = offset(model, image, overlap)
-    t = np.zeros((model.layers[-1].output_shape[1],
+    t = np.zeros((model.get_layer('p').output_shape[1],
                   math.ceil(diff_r / offset_r) + 1,
                   math.ceil(diff_c / offset_c) + 1))
+
+    mask_layer = model.get_layer('mask')
+    if mask_layer:
+        tm = np.zeros((math.ceil(diff_r / offset_r) + 1,
+                       math.ceil(diff_c / offset_c) + 1) + mask_layer.output_shape[1:])
     samples = t.shape[1] * t.shape[2]
 
     def map_r(i, j, b, l):
@@ -51,7 +56,7 @@ def image(model, image, batch_size, overlap, metrics):
             batch_logs[metric] = 0
         callbacks.on_batch_begin(i, batch_logs)
 
-        bX = np.zeros((current_batch_size,) + model.layers[0].input_shape[1:4])
+        bX = np.zeros((current_batch_size,) + model.get_layer('input').input_shape[1:4])
         for j in range(current_batch_size):
             idx_r = map_r(i, j, batch_size, t.shape[1])
             idx_c = map_c(i, j, batch_size, t.shape[1])
@@ -67,12 +72,23 @@ def image(model, image, batch_size, overlap, metrics):
 
         p = model.predict(bX, batch_size=batch_size)
         for j in range(current_batch_size):
-            t[:,
-              map_r(i, j, batch_size, t.shape[1]),
-              map_c(i, j, batch_size, t.shape[1])] = p[j]
-            batch_logs[metrics[p[j].argmax()]] += 1. / current_batch_size
+            if mask_layer:
+                t[:,
+                  map_r(i, j, batch_size, t.shape[1]),
+                  map_c(i, j, batch_size, t.shape[1])] = p[0][j]
+                tm[map_r(i, j, batch_size, t.shape[1]),
+                   map_c(i, j, batch_size, t.shape[1]), :, :, :] = p[1][j]
+                batch_logs[metrics[p[0][j].argmax()]] += 1. / current_batch_size
+            else:
+                t[:,
+                  map_r(i, j, batch_size, t.shape[1]),
+                  map_c(i, j, batch_size, t.shape[1])] = p[j]
+                batch_logs[metrics[p[j].argmax()]] += 1. / current_batch_size
         callbacks.on_batch_end(i, batch_logs)
     callbacks.on_epoch_end(0, {'runtime': (current_time_millis() - start_time) / 1000})
     callbacks.on_train_end()
 
-    return t
+    if mask_layer:
+        return t, tm
+    else:
+        return t

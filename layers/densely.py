@@ -95,12 +95,16 @@ def block2d(inputs, filters, N, k, bottleneck, bottleneck2d_config, conv2d_confi
 
 @ingredients.capture
 def block2d_bn(inputs, filters, N, k, bottleneck, bn_config, bottleneck2d_config,
-               conv2d_config, activation, strides, theta, pool, concat_axis):
+               conv2d_config, activation, strides, theta, pool, concat_axis,
+               *args, **kwargs):
     convs = []
     for j in range(N):
         filters += k
         convs.append(conv2d_bn(inputs if j == 0 else x))
         x = concatenate([inputs] + convs, axis=concat_axis)
+
+    if 'shortcuts' in kwargs:
+        kwargs['shortcuts'].append((x, filters))
 
     if pool:
         filters = int(filters * theta)
