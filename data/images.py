@@ -120,4 +120,4 @@ def patch(x, height, width, *args, **kwargs):
             values.append(kwargs[k][top_left_x:top_left_x + height,
                                     top_left_y:top_left_y + width,
                                     0:x.shape[2]])
-    return values
+    return tuple(values)
