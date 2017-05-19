@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 from keras import backend as K
-from keras.layers import (multiply, Activation, BatchNormalization, Conv2D,
-                          Embedding, Flatten, Input, Reshape, SpatialDropout1D)
+from keras.layers import (multiply, Activation, Conv2D, Embedding, Flatten, Input,
+                          Reshape, SpatialDropout1D)
 from keras.models import Model
 from keras.optimizers import deserialize
 from ingredients.layers import cnn, densely, ingredients
@@ -17,7 +17,8 @@ def config():
             'kernel_size': (3, 3),
             'padding': 'same'
         },
-        'f_activation': 'sigmoid'
+        'f_activation': 'sigmoid',
+        'net_type': 'densely'
     }
 
 
@@ -61,27 +62,35 @@ def build_generator(nb_classes, latent_shape, blocks, embedding_config,
 
 
 @ingredients.capture(prefix='discriminator')
-def build_discriminator(nb_classes, input_shape, filters, blocks, bn_config,
-                        conv2d_config, activation, f_activation, loss,
-                        optimizer, metrics):
+def build_discriminator(nb_classes, input_shape, blocks, bn_config,
+                        conv2d_config, activation, f_activation, net_type, loss,
+                        optimizer, metrics, N=None, filters=None):
+    assert net_type in ['cnn', 'densely']
+
     print('Building discriminator...')
 
     input_image = Input(shape=input_shape, name='input_image')
-    if bn_config:
-        x = Conv2D.from_config(dict(conv2d_config,
-                                    **{'filters': filters}))(input_image)
-        x = BatchNormalization.from_config(bn_config)(x)
-        x = Activation(activation)(x)
-    else:
-        x = Conv2D.from_config(dict(conv2d_config,
-                                    **{'filters': filters,
-                                       'activation': activation}))(input_image)
-
-    for i in range(blocks):
-        if bn_config:
-            x, filters = densely.block2d_bn(x, filters, pool=i != blocks - 1)
-        else:
-            x, filters = densely.block2d(x, filters, pool=i != blocks - 1)
+    if net_type == 'cnn':
+        for i in range(blocks):
+            if N and filters:
+                x = cnn.block2d(input_image if i == 0 else x, N=N, filters=filters,
+                                pool=i != blocks - 1)
+            elif N and not filters:
+                x = cnn.block2d(input_image if i == 0 else x, N=N, pool=i != blocks - 1)
+            elif not N and filters:
+                x = cnn.block2d(input_image if i == 0 else x, filters=filters,
+                                pool=i != blocks - 1)
+            else:
+                x = cnn.block2d(input_image if i == 0 else x, pool=i != blocks - 1)
+    elif net_type == 'densely':
+        filters = input_shape[0 if K.image_data_format() == 'channels_first' else 2]
+        for i in range(blocks):
+            if bn_config:
+                x, filters = densely.block2d_bn(input_image if i == 0 else x, filters,
+                                                pool=i != blocks - 1)
+            else:
+                x, filters = densely.block2d(input_image if i == 0 else x, filters,
+                                             pool=i != blocks - 1)
 
     # fake
     f = Conv2D(1, (4, 4))(x)
