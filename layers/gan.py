@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 from keras import backend as K
-from keras.layers import (multiply, Activation, Conv2D, Embedding, Flatten, Input,
-                          Reshape, SpatialDropout1D)
+from keras.layers import (multiply, Activation, Conv2D, Embedding, Flatten,
+                          Input, Reshape, SpatialDropout1D)
 from keras.models import Model
 from keras.optimizers import deserialize
 from ingredients.layers import cnn, densely, ingredients
@@ -24,7 +24,8 @@ def config():
 
 @ingredients.capture(prefix='generator')
 def build_generator(nb_classes, latent_shape, blocks, embedding_config,
-                    dropout, net_type, loss, optimizer, metrics, N=None, filters=None):
+                    dropout, net_type, loss, optimizer, metrics, N=None,
+                    filters=None):
     assert net_type in ['cnn', 'densely']
 
     print('Building generator...')
@@ -42,29 +43,35 @@ def build_generator(nb_classes, latent_shape, blocks, embedding_config,
     if net_type == 'cnn':
         for i in range(blocks):
             if N and filters:
-                x = cnn.upblock2d(x, N=N, filters=filters, transpose=i != blocks - 1)
+                x = cnn.upblock2d(x, N=N, filters=filters,
+                                  transpose=i != blocks - 1)
             elif N and not filters:
                 x = cnn.upblock2d(x, N=N, transpose=i != blocks - 1)
             elif not N and filters:
-                x = cnn.upblock2d(x, filters=filters, transpose=i != blocks - 1)
+                x = cnn.upblock2d(x, filters=filters,
+                                  transpose=i != blocks - 1)
             else:
                 x = cnn.upblock2d(x, transpose=i != blocks - 1)
     elif net_type == 'densely':
-        filters = latent_shape[0 if K.image_data_format() == "channels_first" else -1]
+        filters = latent_shape[0 if K.image_data_format() == "channels_first"
+                               else -1]
         for i in range(blocks):
-            x, filters = densely.upblock2d(x, filters, transpose=i != blocks - 1)
+            x, filters = densely.upblock2d(x, filters,
+                                           transpose=i != blocks - 1)
     img = Conv2D(3, (1, 1), activation='tanh', padding='same')(x)
 
     # Model
-    generator = Model(inputs=[input_class, input_latent], outputs=img, name='generator')
-    generator.compile(loss=loss, optimizer=deserialize(optimizer), metrics=metrics)
+    generator = Model(inputs=[input_class, input_latent], outputs=img,
+                      name='generator')
+    generator.compile(loss=loss, optimizer=deserialize(optimizer),
+                      metrics=metrics)
     return generator
 
 
 @ingredients.capture(prefix='discriminator')
 def build_discriminator(nb_classes, input_shape, blocks, bn_config,
-                        conv2d_config, activation, f_activation, net_type, loss,
-                        optimizer, metrics, N=None, filters=None):
+                        conv2d_config, activation, f_activation, net_type,
+                        loss, optimizer, metrics, N=None, filters=None):
     assert net_type in ['cnn', 'densely']
 
     print('Building discriminator...')
@@ -72,25 +79,43 @@ def build_discriminator(nb_classes, input_shape, blocks, bn_config,
     input_image = Input(shape=input_shape, name='input_image')
     if net_type == 'cnn':
         for i in range(blocks):
-            if N and filters:
-                x = cnn.block2d(input_image if i == 0 else x, N=N, filters=filters,
+            if bn_config and N and filters:
+                x = cnn.block2d_bn(input_image if i == 0 else x, N=N,
+                                   filters=filters,
+                                   pool=i != blocks - 1)
+            elif not bn_config and N and filters:
+                x = cnn.block2d(input_image if i == 0 else x, N=N,
+                                filters=filters,
                                 pool=i != blocks - 1)
-            elif N and not filters:
-                x = cnn.block2d(input_image if i == 0 else x, N=N, pool=i != blocks - 1)
-            elif not N and filters:
+            elif bn_config and N and not filters:
+                x = cnn.block2d_bn(input_image if i == 0 else x, N=N,
+                                   pool=i != blocks - 1)
+            elif not bn_config and N and not filters:
+                x = cnn.block2d(input_image if i == 0 else x, N=N,
+                                pool=i != blocks - 1)
+            elif bn_config and not N and filters:
+                x = cnn.block2d_bn(input_image if i == 0 else x,
+                                   filters=filters,
+                                   pool=i != blocks - 1)
+            elif not bn_config and not N and filters:
                 x = cnn.block2d(input_image if i == 0 else x, filters=filters,
                                 pool=i != blocks - 1)
+            elif bn_config and not N and not filters:
+                x = cnn.block2d_bn(input_image if i == 0 else x,
+                                   pool=i != blocks - 1)
             else:
-                x = cnn.block2d(input_image if i == 0 else x, pool=i != blocks - 1)
+                x = cnn.block2d(input_image if i == 0 else x,
+                                pool=i != blocks - 1)
     elif net_type == 'densely':
-        filters = input_shape[0 if K.image_data_format() == 'channels_first' else 2]
+        filters = input_shape[0 if K.image_data_format() == 'channels_first'
+                              else 2]
         for i in range(blocks):
             if bn_config:
-                x, filters = densely.block2d_bn(input_image if i == 0 else x, filters,
-                                                pool=i != blocks - 1)
+                x, filters = densely.block2d_bn(input_image if i == 0 else x,
+                                                filters, pool=i != blocks - 1)
             else:
-                x, filters = densely.block2d(input_image if i == 0 else x, filters,
-                                             pool=i != blocks - 1)
+                x, filters = densely.block2d(input_image if i == 0 else x,
+                                             filters, pool=i != blocks - 1)
 
     # fake
     f = Conv2D(1, (4, 4))(x)
@@ -103,13 +128,16 @@ def build_discriminator(nb_classes, input_shape, blocks, bn_config,
     p = Activation('softmax', name='p')(p)
 
     # Model
-    discriminator = Model(inputs=input_image, outputs=[f, p], name='discriminator')
-    discriminator.compile(loss=loss, optimizer=deserialize(optimizer), metrics=metrics)
+    discriminator = Model(inputs=input_image, outputs=[f, p],
+                          name='discriminator')
+    discriminator.compile(loss=loss, optimizer=deserialize(optimizer),
+                          metrics=metrics)
     return discriminator
 
 
 @ingredients.capture(prefix='combined')
-def build_combined(generator, discriminator, latent_shape, loss, optimizer, metrics):
+def build_combined(generator, discriminator, latent_shape, loss, optimizer,
+                   metrics):
     print('Building combined...')
 
     image_class = Input(shape=(1, ), name='combined_input_class')
@@ -119,5 +147,6 @@ def build_combined(generator, discriminator, latent_shape, loss, optimizer, metr
     discriminator.trainable = False
     fake, prediction = discriminator(fake)
     combined = Model(inputs=[image_class, latent], outputs=[fake, prediction])
-    combined.compile(loss=loss, optimizer=deserialize(optimizer), metrics=metrics)
+    combined.compile(loss=loss, optimizer=deserialize(optimizer),
+                     metrics=metrics)
     return combined
