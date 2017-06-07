@@ -5,19 +5,17 @@ import sys
 
 from keras.models import load_model
 from keras.utils import plot_model
-from sacred import Ingredient
-
-
-ingredients = Ingredient('model')
+from ingredients.models import ingredients
 
 
 @ingredients.config
 def config():
     summary = False
+    path = None
 
 
 @ingredients.capture
-def get(build_func, summary, path=None, *args, **kwargs):
+def get(build_func, summary, path, *args, **kwargs):
     if build_func and not path:
         model = build_func(*args, **kwargs)
     else:

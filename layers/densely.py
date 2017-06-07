@@ -71,8 +71,9 @@ def conv2d_bn(x, k, bottleneck, bn_config, bottleneck2d_config, conv2d_config,
 
 
 @ingredients.capture
-def block2d(inputs, filters, N, k, bottleneck, bottleneck2d_config, conv2d_config,
-            activation, strides, theta, pool, concat_axis):
+def block2d(inputs, filters, N, k, bottleneck, bottleneck2d_config,
+            conv2d_config, activation, strides, theta, pool, concat_axis,
+            *args, **kwargs):
     convs = []
     for j in range(N):
         filters += k
@@ -85,22 +86,25 @@ def block2d(inputs, filters, N, k, bottleneck, bottleneck2d_config, conv2d_confi
             x = Conv2D.from_config(dict(bottleneck2d_config,
                                         **{'filters': filters,
                                            'activation': activation}))(x)
-        return Conv2D.from_config(dict(conv2d_config,
-                                       **{'filters': filters,
-                                          'strides': strides,
-                                          'activation': activation}))(x), filters
+        conf = dict(conv2d_config,
+                    **{'filters': filters,
+                       'strides': strides,
+                       'activation': activation})(x)
+        return Conv2D.from_config(conf), filters
     else:
         return x, filters
 
 
 @ingredients.capture
-def block2d_bn(inputs, filters, N, k, bottleneck, bn_config, bottleneck2d_config,
-               conv2d_config, activation, strides, theta, pool, concat_axis,
-               *args, **kwargs):
+def block2d_bn(inputs, filters, N, k, bottleneck, bn_config,
+               bottleneck2d_config, conv2d_config, activation, strides, theta,
+               pool, concat_axis, *args, **kwargs):
     convs = []
     for j in range(N):
         filters += k
-        convs.append(conv2d_bn(inputs if j == 0 else x))
+        convs.append(conv2d_bn(inputs if j == 0 else x, k, bottleneck,
+                               bn_config, bottleneck2d_config, conv2d_config,
+                               activation))
         x = concatenate([inputs] + convs, axis=concat_axis)
 
     if 'shortcuts' in kwargs:
@@ -123,13 +127,15 @@ def block2d_bn(inputs, filters, N, k, bottleneck, bn_config, bottleneck2d_config
 
 
 @ingredients.capture
-def upblock2d(inputs, filters, N, k, bottleneck, bottleneck2d_config, conv2d_config,
-              activation, strides, theta, transpose):
+def upblock2d(inputs, filters, N, k, bottleneck, bottleneck2d_config,
+              conv2d_config, activation, strides, theta, transpose,
+              concat_axis, *args, **kwargs):
     convs = []
     for j in range(N):
         filters += k
-        convs.append(conv2d(inputs if j == 0 else x))
-        x = concatenate([inputs] + convs, axis=1)
+        convs.append(conv2d(inputs if j == 0 else x, k, bottleneck,
+                            bottleneck2d_config, conv2d_config, activation))
+        x = concatenate([inputs] + convs, axis=concat_axis)
 
     if transpose:
         filters = int(filters * theta)
@@ -137,10 +143,10 @@ def upblock2d(inputs, filters, N, k, bottleneck, bottleneck2d_config, conv2d_con
             x = Conv2D.from_config(dict(bottleneck2d_config,
                                         **{'filters': filters,
                                            'activation': activation}))(x)
-        return (Conv2DTranspose.from_config(dict(conv2d_config,
-                                                 **{'filters': filters,
-                                                    'strides': strides,
-                                                    'activation': activation}))(x),
-                filters)
+        conf = dict(conv2d_config,
+                    **{'filters': filters,
+                       'strides': strides,
+                       'activation': activation})
+        return Conv2DTranspose.from_config(conf)(x), filters
     else:
         return x, filters
