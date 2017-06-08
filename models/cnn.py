@@ -43,6 +43,7 @@ def config():
         'metrics': ['accuracy']
     }
 
+
 @ingredients.capture(prefix='cnn')
 def build(grayscale, rows, cols, blocks, nb_classes, net_type, *args,
           **kwargs):
@@ -52,7 +53,8 @@ def build(grayscale, rows, cols, blocks, nb_classes, net_type, *args,
     if net_type == 'cnn':
         return build_cnn(grayscale, rows, cols, blocks, nb_classes, **kwargs)
     elif net_type == 'densely':
-        return build_densely(grayscale, rows, cols, blocks, nb_classes, **kwargs)
+        return build_densely(grayscale, rows, cols, blocks, nb_classes,
+                             **kwargs)
 
 
 @ingredients.capture(prefix='cnn')
