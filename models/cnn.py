@@ -45,16 +45,14 @@ def config():
 
 
 @ingredients.capture(prefix='cnn')
-def build(grayscale, rows, cols, blocks, nb_classes, net_type, *args,
-          **kwargs):
+def build(nb_classes, net_type, *args, **kwargs):
     assert net_type in ['cnn', 'densely']
 
     print('Building CNN [net type: %s]...' % net_type)
     if net_type == 'cnn':
-        return build_cnn(grayscale, rows, cols, blocks, nb_classes, **kwargs)
+        return build_cnn(nb_classes=nb_classes, **kwargs)
     elif net_type == 'densely':
-        return build_densely(grayscale, rows, cols, blocks, nb_classes,
-                             **kwargs)
+        return build_densely(nb_classes=nb_classes, **kwargs)
 
 
 @ingredients.capture(prefix='cnn')
