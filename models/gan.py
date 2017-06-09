@@ -60,11 +60,6 @@ def config():
                 'kernel_size': (3, 3),
                 'padding': 'same'
             },
-            'embedding_config': {
-                'output_dim': 128,
-                'mask_zero': False,
-                'name': 'embedding'
-            },
             'strides': (2, 2),
             'dropout': 0.1,
             'activation': 'tanh',
@@ -135,31 +130,35 @@ def build_generator(nb_classes, latent_shape, blocks, net_type, layers, loss,
 
 
 @ingredients.capture(prefix='discriminator')
-def build_discriminator(nb_classes, input_shape, blocks, net_type, layers,
-                        loss, optimizer, metrics):
+def build_discriminator(grayscale, rows, cols, blocks, nb_classes, net_type,
+                        layers, loss, optimizer, metrics):
     assert net_type in ['cnn', 'densely']
 
     print('Building discriminator [net type: %s]...' % net_type)
 
-    input_image = Input(shape=input_shape, name='input_image')
+    filters = 1 if grayscale else 3
+    if K.image_data_format() == 'channels_first':
+        input_shape = (filters, rows, cols)
+    else:
+        input_shape = (rows, cols, filters)
+
+    inputs = Input(shape=input_shape, name='input')
     if net_type == 'cnn':
         for i in range(blocks):
             if 'bn_config' in layers and layers['bn_config']:
-                x = cnn.block2d_bn(input_image if i == 0 else x,
+                x = cnn.block2d_bn(inputs if i == 0 else x,
                                    pool=i != blocks - 1, **layers)
             else:
-                x = cnn.block2d(input_image if i == 0 else x,
+                x = cnn.block2d(inputs if i == 0 else x,
                                 pool=i != blocks - 1, **layers)
     elif net_type == 'densely':
-        filters = input_shape[0 if K.image_data_format() == 'channels_first'
-                              else 2]
         for i in range(blocks):
             if 'bn_config' in layers and layers['bn_config']:
-                x, filters = densely.block2d_bn(input_image if i == 0 else x,
+                x, filters = densely.block2d_bn(inputs if i == 0 else x,
                                                 filters, pool=i != blocks - 1,
                                                 **layers)
             else:
-                x, filters = densely.block2d(input_image if i == 0 else x,
+                x, filters = densely.block2d(inputs if i == 0 else x,
                                              filters, pool=i != blocks - 1,
                                              **layers)
 
@@ -174,7 +173,7 @@ def build_discriminator(nb_classes, input_shape, blocks, net_type, layers,
     p = Activation('softmax', name='p')(p)
 
     # Model
-    discriminator = Model(inputs=input_image, outputs=[f, p],
+    discriminator = Model(inputs=inputs, outputs=[f, p],
                           name='discriminator')
     discriminator.compile(loss=loss, optimizer=deserialize(optimizer),
                           metrics=metrics)
