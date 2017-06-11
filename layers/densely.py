@@ -89,8 +89,8 @@ def block2d(inputs, filters, N, k, bottleneck, bottleneck2d_config,
         conf = dict(conv2d_config,
                     **{'filters': filters,
                        'strides': strides,
-                       'activation': activation})(x)
-        return Conv2D.from_config(conf), filters
+                       'activation': activation})
+        return Conv2D.from_config(conf)(x), filters
     else:
         return x, filters
 
