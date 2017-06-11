@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from keras.layers import (Activation, BatchNormalization, Conv2D,
-                          Conv2DTranspose)
+from keras.layers import Activation, BatchNormalization, Conv2D, Conv2DTranspose
 from ingredients.layers import ingredients
 
 
@@ -31,7 +30,8 @@ def conv2d_bn(x, filters, bn_config, conv2d_config, activation):
 
 
 @ingredients.capture
-def block2d(inputs, filters, N, conv2d_config, activation, strides, pool):
+def block2d(inputs, filters, N, conv2d_config, activation, strides, pool,
+            *args, **kwargs):
     for j in range(N):
         x = conv2d(inputs if j == 0 else x, filters, conv2d_config, activation)
 
