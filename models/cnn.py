@@ -92,8 +92,8 @@ def build_cnn(grayscale, rows, cols, blocks, nb_classes, layers, p_activation,
 
 
 @ingredients.capture(prefix='cnn')
-def build_densely(grayscale, rows, cols, blocks, nb_classes, layers, loss,
-                  optimizer, metrics):
+def build_densely(grayscale, rows, cols, blocks, nb_classes, layers,
+                  p_activation, loss, optimizer, metrics):
     filters = 1 if grayscale else 3
     if K.image_data_format() == 'channels_first':
         input_shape = (filters, rows, cols)
@@ -120,7 +120,7 @@ def build_densely(grayscale, rows, cols, blocks, nb_classes, layers, loss,
     # softmax
     x = Conv2D(nb_classes, (int(rows), int(cols)))(x)
     x = Flatten()(x)
-    predictions = Activation('softmax', name='p')(x)
+    predictions = Activation(p_activation, name='p')(x)
 
     # Model
     model = Model(inputs=inputs, outputs=predictions)
