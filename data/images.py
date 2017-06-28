@@ -19,27 +19,9 @@ def config():
 
 @ingredients.capture
 def load(DATASETS_DIR, dataset, which_set, ext, grayscale, masks):
-    print('Loading images [dataset=%s - which_set=%s]...' % (dataset, which_set))
-
-    classes = {}
-    nb_classes = 0
-    if os.path.exists(os.path.join(DATASETS_DIR, dataset, which_set, 'classes.csv')):
-        with open(os.path.join(DATASETS_DIR, dataset, which_set, 'classes.csv'),
-                  'r', encoding='utf8') as f:
-            reader = DictReader(f)
-            for row in reader:
-                classes[row['image']] = [int(c) for c in row['class'].split(',')] \
-                    if ',' in row['class'] else [int(row['class'])]
-        nb_classes = len(set([c for img in classes.values() for c in img]))
-    else:
-        for e in sorted(os.scandir(os.path.join(DATASETS_DIR, dataset, which_set)),
-                        key=lambda e: e.name):
-            if e.is_dir():
-                for p in list_pictures(e.path):
-                    if masks and 'mask' in os.path.basename(p):
-                        continue
-                    classes[os.path.basename(p)] = [nb_classes]
-                nb_classes += 1
+    print('Loading images [dataset=%s - which_set=%s]...' % (dataset,
+                                                             which_set))
+    classes, nb_classes = load_classes()
 
     X = []
     y = []
@@ -53,14 +35,16 @@ def load(DATASETS_DIR, dataset, which_set, ext, grayscale, masks):
         if masks:
             mask_picture = os.path.join(os.path.dirname(picture),
                                         name.replace('.png', '.mask.png'))
+            mask_name = os.path.basename(mask_picture)
             if os.path.exists(mask_picture):
-                X.append(img_to_array(load_img(picture, grayscale)))
-                Xmasks.append(img_to_array(load_img(mask_picture, True)))
+                X.append(load_img_array(picture))
+                Xmasks.append(load_img_array(mask_picture, True))
+                names.append((name, mask_name))
             else:
                 continue
         else:
-            X.append(img_to_array(load_img(picture, grayscale)))
-        names.append(name)
+            X.append(load_img_array(picture))
+            names.append(name)
         if os.path.basename(picture) in classes:
             y.append(classes[os.path.basename(picture)])
     if len(set([x.shape for x in X])) <= 1:
@@ -86,6 +70,46 @@ def load(DATASETS_DIR, dataset, which_set, ext, grayscale, masks):
             return X, Xmasks, names
         else:
             return X, names
+
+
+@ingredients.capture
+def meta_info(DATASETS_DIR, dataset, which_set, ext, masks):
+    print('Loading meta info [dataset=%s - which_set=%s]...' % (dataset,
+                                                                which_set))
+    classes, nb_classes = load_classes()
+
+    y = []
+    paths = []
+    for picture in sorted(list_pictures(os.path.join(DATASETS_DIR,
+                                        dataset, which_set), ext=ext)):
+        if masks and 'mask' in os.path.basename(p):
+            continue
+        if masks:
+            name = os.path.basename(picture)
+            mask_picture = os.path.join(os.path.dirname(picture),
+                                        name.replace('.png', '.mask.png'))
+            if os.path.exists(mask_picture):
+                paths.append((picture, mask_picture))
+            else:
+                continue
+        else:
+            paths.append(picture)
+        if os.path.basename(picture) in classes:
+            y.append(classes[os.path.basename(picture)])
+    paths = np.asarray(paths)
+    if y:
+        if max([type(i) == list for i in y]) and max([len(i) > 1 for i in y]):
+            max_len = max([len(i) for i in y])
+            new_y = np.zeros((len(y), max_len, nb_classes))
+            for i, classes in enumerate(y):
+                for j, c in enumerate(classes):
+                    new_y[i, j, c] = 1
+            y = new_y
+        else:
+            y = np_utils.to_categorical(np.asarray(y), nb_classes)
+        return y, paths, nb_classes
+    else:
+        return paths
 
 
 @ingredients.capture
@@ -121,3 +145,38 @@ def patch(x, height, width, *args, **kwargs):
                                     top_left_y:top_left_y + width,
                                     0:x.shape[2]])
     return tuple(values)
+
+
+@ingredients.capture
+def load_classes(DATASETS_DIR, dataset, which_set, masks):
+    classes = {}
+    nb_classes = 0
+    if os.path.exists(os.path.join(DATASETS_DIR, dataset, which_set,
+                                   'classes.csv')):
+        with open(os.path.join(DATASETS_DIR, dataset, which_set,
+                               'classes.csv'),
+                  'r', encoding='utf8') as f:
+            reader = DictReader(f)
+            for row in reader:
+                if ',' in row['class']:
+                    clss = [int(c) for c in row['class'].split(',')]
+                    classes[row['image']] = clss
+                else:
+                    classes[row['image']] = [int(row['class'])]
+        nb_classes = len(set([c for img in classes.values() for c in img]))
+    else:
+        for e in sorted(os.scandir(os.path.join(DATASETS_DIR, dataset,
+                                                which_set)),
+                        key=lambda e: e.name):
+            if e.is_dir():
+                for p in list_pictures(e.path):
+                    if masks and 'mask' in os.path.basename(p):
+                        continue
+                    classes[os.path.basename(p)] = [nb_classes]
+                nb_classes += 1
+    return classes, nb_classes
+
+
+@ingredients.capture
+def load_img_array(path, grayscale):
+    return img_to_array(load_img(path, grayscale))
