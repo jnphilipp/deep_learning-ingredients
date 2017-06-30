@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import math
+
 from keras import backend as K
 from keras.layers import Activation, Conv2D, Flatten, GaussianNoise, Input
 from keras.models import Model
@@ -77,8 +79,8 @@ def build_cnn(grayscale, rows, cols, blocks, nb_classes, layers, loss,
         else:
             x = cnn.block2d(x, pool=i != blocks - 1, **layers)
         if i != blocks - 1:
-            rows /= layers['strides'][0]
-            cols /= layers['strides'][1]
+            rows = math.ceil(rows / layers['strides'][0])
+            cols = math.ceil(cols / layers['strides'][1])
 
     # softmax
     x = Conv2D(nb_classes, (int(rows), int(cols)))(x)
@@ -114,8 +116,8 @@ def build_densely(grayscale, rows, cols, blocks, nb_classes, layers, loss,
             x, filters = densely.block2d(x, filters, pool=i != blocks - 1,
                                          **layers)
         if i != blocks - 1:
-            rows /= layers['strides'][0]
-            cols /= layers['strides'][1]
+            rows = math.ceil(rows / layers['strides'][0])
+            cols = math.ceil(cols / layers['strides'][1])
 
     # softmax
     x = Conv2D(nb_classes, (int(rows), int(cols)))(x)
