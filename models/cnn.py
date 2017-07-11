@@ -3,7 +3,8 @@
 import math
 
 from keras import backend as K
-from keras.layers import Activation, Conv2D, Flatten, GaussianNoise, Input
+from keras.layers import (Activation, AlphaDropout, Conv2D, Flatten,
+                          GaussianNoise, Input)
 from keras.models import Model
 from keras.optimizers import deserialize
 from ingredients.layers import cnn, densely
@@ -38,6 +39,7 @@ def config():
             'concat_axis': 1
         },
         'net_type': 'densely',
+        'output': 'class',
         'loss': 'categorical_crossentropy',
         'optimizer': {
             'class_name': 'adam',
@@ -59,8 +61,10 @@ def build(nb_classes, net_type, *args, **kwargs):
 
 
 @ingredients.capture(prefix='cnn')
-def build_cnn(grayscale, rows, cols, blocks, nb_classes, layers, loss,
+def build_cnn(grayscale, rows, cols, blocks, nb_classes, layers, output, loss,
               optimizer, metrics):
+    assert output in ['class', 'image']
+
     filters = 1 if grayscale else 3
     if K.image_data_format() == 'channels_first':
         input_shape = (filters, rows, cols)
@@ -78,14 +82,20 @@ def build_cnn(grayscale, rows, cols, blocks, nb_classes, layers, loss,
             x = cnn.block2d_bn(x, pool=i != blocks - 1, **layers)
         else:
             x = cnn.block2d(x, pool=i != blocks - 1, **layers)
+        if 'alpha_dropout_config' in layers and layers['alpha_dropout_config']:
+            x = AlphaDropout.from_config(layers['alpha_dropout_config'])(x)
         if i != blocks - 1:
             rows = math.ceil(rows / layers['strides'][0])
             cols = math.ceil(cols / layers['strides'][1])
 
-    # softmax
-    x = Conv2D(nb_classes, (int(rows), int(cols)))(x)
-    x = Flatten()(x)
-    predictions = Activation(layers['p_activation'], name='p')(x)
+    # output
+    if output == 'class':
+        x = Conv2D(nb_classes, (int(rows), int(cols)))(x)
+        x = Flatten()(x)
+        predictions = Activation(layers['p_activation'], name='p')(x)
+    elif output == 'image':
+        predictions = Conv2D(1 if grayscale else 3, (1, 1), padding='same',
+                             activation='sigmoid')(x)
 
     # Model
     model = Model(inputs=inputs, outputs=predictions)
@@ -95,7 +105,9 @@ def build_cnn(grayscale, rows, cols, blocks, nb_classes, layers, loss,
 
 @ingredients.capture(prefix='cnn')
 def build_densely(grayscale, rows, cols, blocks, nb_classes, layers, loss,
-                  optimizer, metrics):
+                  output, optimizer, metrics):
+    assert output in ['class', 'image']
+
     filters = 1 if grayscale else 3
     if K.image_data_format() == 'channels_first':
         input_shape = (filters, rows, cols)
@@ -119,10 +131,14 @@ def build_densely(grayscale, rows, cols, blocks, nb_classes, layers, loss,
             rows = math.ceil(rows / layers['strides'][0])
             cols = math.ceil(cols / layers['strides'][1])
 
-    # softmax
-    x = Conv2D(nb_classes, (int(rows), int(cols)))(x)
-    x = Flatten()(x)
-    predictions = Activation(layers['p_activation'], name='p')(x)
+    # output
+    if output == 'class':
+        x = Conv2D(nb_classes, (int(rows), int(cols)))(x)
+        x = Flatten()(x)
+        predictions = Activation(layers['p_activation'], name='p')(x)
+    elif output == 'image':
+        predictions = Conv2D(1 if grayscale else 3, (1, 1), padding='same',
+                             activation='sigmoid')(x)
 
     # Model
     model = Model(inputs=inputs, outputs=predictions)
