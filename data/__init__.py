@@ -11,6 +11,7 @@ from .core import *
 from . import h5py
 from . import images
 from . import predict
+from . import text
 
 
 @ingredients.config
