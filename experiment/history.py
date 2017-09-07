@@ -33,8 +33,10 @@ def plot(path, name='train_history'):
     for k in history.keys():
         if 'loss' in k:
             lines.append(ax1.plot(range(len(history[k])), history[k], label=k))
+            next(ax2._get_lines.prop_cycler)['color']
         else:
             lines.append(ax2.plot(range(len(history[k])), history[k], label=k))
+            next(ax1._get_lines.prop_cycler)['color']
 
     ax1.set_ylabel('loss')
     ax1.set_xlabel('epoch')
