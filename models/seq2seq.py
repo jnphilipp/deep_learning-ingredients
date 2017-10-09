@@ -67,12 +67,32 @@ def build(vocab_size, max_len, layers, loss, optimizer, metrics,
     if layers['embedding_dropout']:
         x = SpatialDropout1D(rate=layers['embedding_dropout'])(x)
 
-    x = deserialize_layers(layers['recurrent_in_config'])(x)
-    x = RepeatVector.from_config(dict(layers['repeatvector_config'],
-                                      **{'n': max_len}))(x)
-    x = deserialize_layers(layers['recurrent_out_config'])(x)
-    output = Conv1D.from_config(dict(layers['conv1d_config'],
-                                     **{'filters': vocab_size}))(x)
+    vec = deserialize_layers(layers['recurrent_in_config'])(x)
+    if type(max_len) == int:
+        x = RepeatVector.from_config(dict(layers['repeatvector_config'],
+                                          **{'n': max_len}))(vec)
+        x = deserialize_layers(layers['recurrent_out_config'])(x)
+        output = Conv1D.from_config(dict(layers['conv1d_config'],
+                                         **{'filters': vocab_size}))(x)
+    else:
+        output = []
+        conv1d_config = dict(layers['conv1d_config'],
+                             **{'filters': vocab_size})
+        for i, mlen in enumerate(max_len):
+            repeatvector_config = dict(layers['repeatvector_config'],
+                                       **{'n': mlen})
+            if 'name' in repeatvector_config:
+                repeatvector_config['name'] += str(i)
+            x = RepeatVector.from_config(repeatvector_config)(vec)
+
+            recurrent_out_config = layers['recurrent_out_config']
+            if 'name' in recurrent_out_config['config']:
+                recurrent_out_config['config']['name'] += str(i)
+            x = deserialize_layers(recurrent_out_config)(x)
+
+            if 'name' in conv1d_config:
+                conv1d_config['name'] += str(i)
+            output.append(Conv1D.from_config(conv1d_config)(x))
 
     # Model
     model = Model(inputs=inputs, outputs=output)
