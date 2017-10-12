@@ -21,6 +21,8 @@ def save(path, name, history):
 
 @ingredients.capture
 def plot(path, name='train_history'):
+    import matplotlib
+    matplotlib.use('Agg')
     import matplotlib.pyplot as plt
 
     fig = plt.figure(figsize=(19.2, 10.8), dpi=100)
