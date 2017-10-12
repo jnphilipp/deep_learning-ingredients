@@ -3,7 +3,7 @@
 import json
 import os
 
-from ingredients.experiment import ingredients
+from ingredients.experiments import ingredients
 
 
 @ingredients.capture

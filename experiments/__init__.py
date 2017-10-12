@@ -2,14 +2,14 @@
 
 from ingredients import models as models_ingredients
 from sacred import Ingredient
-ingredients = Ingredient('experiment',
+ingredients = Ingredient('experiments',
                          ingredients=[models_ingredients.ingredients])
 
 
 import os
 
 from ingredients import PROJECT_DIR
-from ingredients.experiment import history
+from ingredients.experiments import history
 
 
 @ingredients.config
