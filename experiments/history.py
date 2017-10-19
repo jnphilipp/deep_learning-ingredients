@@ -6,6 +6,7 @@ import os
 from ingredients.experiments import ingredients
 from ingredients.experiments import plots
 
+
 @ingredients.capture
 def load(path, name):
     with open(os.path.join(path, '%s.json' % name), 'r') as f:
