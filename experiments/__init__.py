@@ -10,6 +10,7 @@ import os
 
 from ingredients import PROJECT_DIR
 from ingredients.experiments import history
+from ingredients.experiments import plots
 
 
 @ingredients.config
