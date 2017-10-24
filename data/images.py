@@ -29,7 +29,7 @@ def load(DATASETS_DIR, dataset, which_set, ext, grayscale, masks):
     names = []
     for picture in sorted(list_pictures(os.path.join(DATASETS_DIR,
                                         dataset, which_set), ext=ext)):
-        if masks and 'mask' in os.path.basename(p):
+        if masks and 'mask' in os.path.basename(picture):
             continue
         name = os.path.basename(picture)
         if masks:
