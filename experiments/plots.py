@@ -23,9 +23,12 @@ def scatter(path, name, data, legend=True, xlim=None, ylim=None):
         ax.set_ylim(ylim)
 
     for i, row in enumerate(data):
+        s = row['s'] if 's' in row else None
         color = row['color'] if 'color' in row else next(colors)
         label = row['label'] if 'label' in row else None
-        ax.scatter(row['x'], row['y'], color=color, label=label)
+        alpha = row['alpha'] if 'alpha' in row else None
+        marker = row['marker'] if 'marker' in row else 'o'
+        ax.scatter(row['x'], row['y'], s, color=color, marker=marker, alpha=alpha, label=label)
 
     if legend:
         ax.legend(loc=9, bbox_to_anchor=(0.5, -0.07), ncol=4)
@@ -72,3 +75,4 @@ def lines(path, name, x1_data, x2_data=None, legend=True):
                 format='png',
                 bbox_inches='tight')
     plt.close()
+
