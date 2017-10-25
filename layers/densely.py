@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from keras import backend as K
 from keras.layers import (concatenate, Activation, BatchNormalization, Conv1D,
                           Conv2D, Conv2DTranspose)
 from ingredients.layers import ingredients
@@ -10,7 +11,9 @@ def config():
     N = 10
     k = 12
     bottleneck = 4
-    bn_config = {'axis': 1}
+    bn_config = {
+        'axis': 1 if K.image_data_format() == 'channels_first' else -1
+    }
     bottleneck1d_config = {
         'kernel_size': 1,
         'padding': 'same'
@@ -30,7 +33,7 @@ def config():
     strides = (2, 2)
     activation = 'tanh'
     theta = 0.5
-    concat_axis = 1
+    concat_axis = 1 if K.image_data_format() == 'channels_first' else -1
 
 
 @ingredients.capture
@@ -79,6 +82,9 @@ def block2d(inputs, filters, N, k, bottleneck, bottleneck2d_config,
         filters += k
         convs.append(conv2d(inputs if j == 0 else x))
         x = concatenate([inputs] + convs, axis=concat_axis)
+
+    if 'shortcuts' in kwargs:
+        kwargs['shortcuts'].append((x, filters))
 
     if pool:
         filters = int(filters * theta)

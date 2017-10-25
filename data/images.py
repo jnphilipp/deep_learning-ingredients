@@ -121,29 +121,23 @@ def patch(x, height, width, *args, **kwargs):
 
     values = []
     if K.image_data_format() == 'channels_first':
-        values.append(x[0:x.shape[0],
-                        top_left_x:top_left_x + height,
+        values.append(x[:, top_left_x:top_left_x + height,
                         top_left_y:top_left_y + width])
         for a in args:
-            values.append(a[0:x.shape[0],
-                            top_left_x:top_left_x + height,
+            values.append(a[:, top_left_x:top_left_x + height,
                             top_left_y:top_left_y + width])
         for k in kwargs.keys():
-            values.append(kwargs[k][0:x.shape[0],
-                                    top_left_x:top_left_x + height,
+            values.append(kwargs[k][:, top_left_x:top_left_x + height,
                                     top_left_y:top_left_y + width])
     else:
         values.append(x[top_left_x:top_left_x + height,
-                        top_left_y:top_left_y + width,
-                        0:x.shape[2]])
+                        top_left_y:top_left_y + width, :])
         for a in args:
             values.append(a[top_left_x:top_left_x + height,
-                            top_left_y:top_left_y + width,
-                            0:x.shape[2]])
+                            top_left_y:top_left_y + width, :])
         for k in kwargs.keys():
             values.append(kwargs[k][top_left_x:top_left_x + height,
-                                    top_left_y:top_left_y + width,
-                                    0:x.shape[2]])
+                                    top_left_y:top_left_y + width, :])
     return tuple(values)
 
 
