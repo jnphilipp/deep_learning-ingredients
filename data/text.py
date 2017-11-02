@@ -65,7 +65,7 @@ def generate_subset(DATASETS_DIR, dataset, new_set, max_vocab_size,
         for i in search_list:
             tmp_vocab = set(sentences[i][1]).union(vocab.keys())
             if sentences[i][1].issubset(vocab.keys()):
-                subset_idx.append[i]
+                subset_idx.append(i)
             elif min_vocab_len is None:
                 min_vocab = tmp_vocab
                 min_vocab_len = len(tmp_vocab)
@@ -77,6 +77,9 @@ def generate_subset(DATASETS_DIR, dataset, new_set, max_vocab_size,
                 min_vocab_idx = [i]
             elif len(tmp_vocab) == min_vocab_len and min_vocab == tmp_vocab:
                 min_vocab_idx.append(i)
+
+            if len(tmp_vocab) == len(vocab) + 1:
+                break
 
         min_vocab_idx += subset_idx
         if min_vocab_idx == []:
@@ -97,6 +100,14 @@ def generate_subset(DATASETS_DIR, dataset, new_set, max_vocab_size,
         sys.stdout.write('\rvocab size: %d - sentences: %d' % (len(vocab),
                                                                len(selected)))
         if len(vocab) >= max_vocab_size or b:
+            for i in search_list:
+                if sentences[i][1].issubset(vocab.keys()):
+                    subset_idx.append(i)
+            for i in subset_idx:
+                selected.append(i)
+                search_list.remove(i)
+            sys.stdout.write('\rvocab size: %d - ' +
+                             'sentences: %d' % (len(vocab), len(selected)))
             break
     print('')
 
