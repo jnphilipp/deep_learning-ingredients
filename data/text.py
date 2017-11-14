@@ -106,8 +106,8 @@ def generate_subset(DATASETS_DIR, dataset, new_set, max_vocab_size,
             for i in subset_idx:
                 selected.append(i)
                 search_list.remove(i)
-            sys.stdout.write('\rvocab size: %d - ' +
-                             'sentences: %d' % (len(vocab), len(selected)))
+            sys.stdout.write('\rvocab size: %d - sentences: %d' %
+                             (len(vocab), len(selected)))
             break
     print('')
 
