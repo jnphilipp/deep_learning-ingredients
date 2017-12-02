@@ -10,6 +10,7 @@ from ingredients import PROJECT_DIR
 from .core import *
 from . import h5py
 from . import images
+from . import json
 from . import predict
 from . import text
 
