@@ -9,14 +9,13 @@ from keras.utils import np_utils
 
 
 @ingredients.capture
-def load(DATASETS_DIR, dataset, which_set, vocab):
+def load(DATASETS_DIR, dataset, which_set, vocab, fclean=None):
+    trans = str.maketrans(dict((s, str(i)) for i, s in enumerate(vocab)))
+
     data = {}
     with open(os.path.join(DATASETS_DIR, dataset, '%s.json' % which_set),
               'r', encoding='utf-8') as f:
         data = json.loads(f.read())
-
-    vocab = dict((s, str(i)) for i, s in enumerate(vocab))
-    trans = str.maketrans(vocab)
 
     texts = []
     input_len = 0
@@ -25,8 +24,9 @@ def load(DATASETS_DIR, dataset, which_set, vocab):
     y_languages = []
     languages = []
     for e in data['common_examples']:
-        input_len = max(input_len, len(e['text']))
-        texts.append([int(s.translate(trans)) for s in '%s^' % e['text']])
+        text = fclean(e['text'], vocab) if fclean else e['text']
+        input_len = max(input_len, len(text))
+        texts.append([int(s.translate(trans)) for s in '%s^' % text])
 
         if e['intent'] not in intents:
             intents.append(e['intent'])
