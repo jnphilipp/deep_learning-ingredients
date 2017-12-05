@@ -28,7 +28,8 @@ def scatter(path, name, data, legend=True, xlim=None, ylim=None):
         label = row['label'] if 'label' in row else None
         alpha = row['alpha'] if 'alpha' in row else None
         marker = row['marker'] if 'marker' in row else 'o'
-        ax.scatter(row['x'], row['y'], s, color=color, marker=marker, alpha=alpha, label=label)
+        ax.scatter(row['x'], row['y'], s, color=color, marker=marker,
+                   alpha=alpha, label=label)
 
     if legend:
         ax.legend(loc=9, bbox_to_anchor=(0.5, -0.07), ncol=4)
@@ -55,7 +56,7 @@ def lines(path, name, x1_data, x2_data=None, legend=True):
         if x2_data:
             next(ax2._get_lines.prop_cycler)['color']
     for row in x2_data['lines']:
-        lines.append(ax1.plot(row['x'], row['y'], label=row['label']))
+        lines.append(ax2.plot(row['x'], row['y'], label=row['label']))
 
     if 'xlabel' in x1_data:
         ax1.set_xlabel(x1_data['xlabel'])
