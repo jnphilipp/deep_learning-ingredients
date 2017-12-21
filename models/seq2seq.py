@@ -85,7 +85,7 @@ def build(vocab_size, max_len, layers, loss, optimizer, metrics,
                 repeatvector_config['name'] += str(i)
             x = RepeatVector.from_config(repeatvector_config)(vec)
 
-            recurrent_out_config = layers['recurrent_out_config']
+            recurrent_out_config = layers['recurrent_out_config'].copy()
             if 'name' in recurrent_out_config['config']:
                 recurrent_out_config['config']['name'] += str(i)
             x = deserialize_layers(recurrent_out_config)(x)

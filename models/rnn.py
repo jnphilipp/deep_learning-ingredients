@@ -42,7 +42,8 @@ def config():
 
 
 @ingredients.capture(prefix='rnn')
-def build(vocab_size, nb_classes, layers, loss, optimizer, metrics):
+def build(vocab_size, nb_classes, layers, loss, optimizer, metrics,
+          output_names=None):
     print('Building RNN...')
 
     inputs = Input(shape=(None,), name='input')
@@ -50,22 +51,37 @@ def build(vocab_size, nb_classes, layers, loss, optimizer, metrics):
                                    **{'input_dim': vocab_size}))(inputs)
     if layers['embedding_dropout']:
         x = SpatialDropout1D(rate=layers['embedding_dropout'])(x)
-
     vec = deserialize_layers(layers['recurrent_config'])(x)
+
+    losses = []
     if type(nb_classes) == int:
-        output = Dense.from_config(dict(layers['dense_config'],
-                                    **{'units': nb_classes}))(x)
+        config = dict(layers['dense_config'].copy(), **{'units': nb_classes})
+        if output_names:
+            config['name'] = output_names
+        if nb_classes == 1:
+            config['activation'] = 'sigmoid'
+            losses.append('mse')
+        else:
+            losses.append(loss)
+        output = Dense.from_config(config)(x)
     else:
         output = []
         for i, units in enumerate(nb_classes):
-            dense_config = layers['dense_config'].copy()
-            if 'name' in dense_config:
-                dense_config['name'] += str(i)
-            output.append(Dense.from_config(dict(dense_config,
-                                                 **{'units': units}))(vec))
+            config = layers['dense_config'].copy()
+            if 'name' in config:
+                config['name'] += str(i)
+            config = dict(config, **{'units': units})
+            if output_names:
+                config['name'] = output_names[i]
+            if units == 1:
+                config['activation'] = 'sigmoid'
+                losses.append('mse')
+            else:
+                losses.append(loss)
+            output.append(Dense.from_config(config)(vec))
 
     # Model
     model = Model(inputs=inputs, outputs=output)
-    model.compile(loss=loss, optimizer=deserialize_optimizers(optimizer),
+    model.compile(loss=losses, optimizer=deserialize_optimizers(optimizer),
                   metrics=metrics)
     return model

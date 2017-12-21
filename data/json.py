@@ -17,30 +17,52 @@ def load(DATASETS_DIR, dataset, which_set, vocab, fclean=None):
               'r', encoding='utf-8') as f:
         data = json.loads(f.read())
 
-    texts = []
+    entities = []
+    y_entities = {}
+    for example in data['common_examples']:
+        for entity in example['entities']:
+            if entity['entity'] not in entities:
+                entities.append(entity['entity'])
+                y_entities[entity['entity']] = []
+
     input_len = 0
     intents = []
-    y_intents = []
-    y_languages = []
     languages = []
-    for e in data['common_examples']:
-        text = fclean(e['text'], vocab) if fclean else e['text']
+    texts = []
+    y_intent = []
+    y_language = []
+    for example in data['common_examples']:
+        text = fclean(example['text'], vocab) if fclean else example['text']
         input_len = max(input_len, len(text))
         texts.append([int(s.translate(trans)) for s in '%s^' % text])
 
-        if e['intent'] not in intents:
-            intents.append(e['intent'])
-        if e['language'] not in languages:
-            languages.append(e['language'])
+        if example['intent'] not in intents:
+            intents.append(example['intent'])
+        if example['language'] not in languages:
+            languages.append(example['language'])
 
-        y_intents.append(intents.index(e['intent']))
-        y_languages.append(languages.index(e['language']))
+        y_intent.append(intents.index(example['intent']))
+        y_language.append(languages.index(example['language']))
+
+        for entity in entities:
+            if True in [entity == e['entity'] for e in example['entities']]:
+                y_entities[entity].append(1)
+            else:
+                y_entities[entity].append(0)
 
     X = np.zeros((len(texts), input_len + 1))
     for i, text in enumerate(texts):
         X[i][0:len(text)] = text
 
-    y_intents = np_utils.to_categorical(y_intents, len(intents))
-    y_languages = np_utils.to_categorical(y_languages, len(languages))
-
-    return X, [y_intents, y_languages], len(vocab), [intents, languages]
+    y = {
+        'intent': np_utils.to_categorical(y_intent, len(intents)),
+        'language': np_utils.to_categorical(y_language, len(languages)),
+    }
+    for k, v in y_entities.items():
+        y[k] = np.asarray(v).reshape((len(X), 1))
+    return X, y, len(vocab), {
+        'intents': intents,
+        'languages': languages,
+        'entities': entities,
+        'outputs': list(y.keys())
+    }
