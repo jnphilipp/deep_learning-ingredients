@@ -61,8 +61,8 @@ def load(DATASETS_DIR, dataset, which_set, vocab, fclean=None):
     for k, v in y_entities.items():
         y[k] = np.asarray(v).reshape((len(X), 1))
     return X, y, len(vocab), {
-        'intents': intents,
-        'languages': languages,
+        'intent': intents,
+        'language': languages,
         'entities': entities,
         'outputs': list(y.keys())
     }

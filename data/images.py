@@ -18,7 +18,8 @@ def config():
 
 
 @ingredients.capture
-def load(DATASETS_DIR, dataset, which_set, ext, grayscale, masks):
+def load(DATASETS_DIR, dataset, which_set, ext, grayscale, masks,
+         load_images=True):
     print('Loading images [dataset=%s - which_set=%s]...' % (dataset,
                                                              which_set))
     classes, nb_classes = load_classes()
@@ -37,13 +38,14 @@ def load(DATASETS_DIR, dataset, which_set, ext, grayscale, masks):
                                         name.replace('.png', '.mask.png'))
             mask_name = os.path.basename(mask_picture)
             if os.path.exists(mask_picture):
-                X.append(load_img_array(picture))
-                Xmasks.append(load_img_array(mask_picture, True))
+                X.append(load_img_array(picture) if load_images else picture)
+                Xmasks.append(load_img_array(mask_picture, True)
+                    if load_images else mask_picture)
                 names.append((name, mask_name))
             else:
                 continue
         else:
-            X.append(load_img_array(picture))
+            X.append(load_img_array(picture) if load_images else picture)
             names.append(name)
         if os.path.basename(picture) in classes:
             y.append(classes[os.path.basename(picture)])
