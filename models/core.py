@@ -3,6 +3,7 @@
 import os
 import sys
 
+from keras import backend as K
 from keras.models import load_model
 from keras.utils import plot_model
 from ingredients.models import ingredients
@@ -26,13 +27,15 @@ def get(build_func, summary, path, *args, **kwargs):
 
 
 @ingredients.capture
-def load(path):
-    if isinstance(path, str):
-        print('Loading model [%s]...' % path)
+def load(path, _log):
+    if path is None:
+        _log.critical('No path given to load model.')
+    elif isinstance(path, str):
+        _log.info('Load model [%s]' % path)
         return load_model(path)
     else:
         models = []
-        print('Loading model [%s]...' % ', '.join(path))
+        _log.info('Load model [%s]' % ', '.join(path))
         for p in path:
             models.append(load_model(p))
         return models
@@ -58,3 +61,42 @@ def save(path, model, name=None):
 @ingredients.capture
 def plot(model, path, name='model'):
     plot_model(model, to_file=os.path.join(path, '%s.png' % name))
+
+
+@ingredients.capture
+def make_function(model, input_layers, output_layers):
+    def get_layer(config):
+        if 'name' in layer:
+            return model.get_layer(layer['name'])
+        elif 'idx' in layer:
+            return model.get_layer(index=layer['idx'])
+        elif 'index' in layer:
+            return model.get_layer(index=layer['index'])
+        else:
+            return None
+
+    inputs = []
+    for layer in input_layers:
+        if 'at' in layer:
+            inputs.append(get_layer(layer).get_input_at(layer['at']))
+        elif 'node_idx' in layer:
+            inputs.append(get_layer(layer).get_input_at(layer['node_idx']))
+        elif 'node_index' in layer:
+            inputs.append(get_layer(layer).get_input_at(layer['node_index']))
+        else:
+            inputs.append(get_layer(layer).input)
+
+    inputs.append(K.learning_phase())
+
+    outputs = []
+    for layer in output_layers:
+        if 'at' in layer:
+            outputs.append(get_layer(layer).get_output_at(layer['at']))
+        elif 'node_idx' in layer:
+            outputs.append(get_layer(layer).get_output_at(layer['node_idx']))
+        elif 'node_index' in layer:
+            outputs.append(get_layer(layer).get_output_at(layer['node_index']))
+        else:
+            outputs.append(get_layer(layer).output)
+
+    return K.function(inputs, outputs)

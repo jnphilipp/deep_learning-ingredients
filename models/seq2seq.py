@@ -58,7 +58,7 @@ def config():
 
 @ingredients.capture(prefix='seq2seq')
 def build(vocab_size, max_len, layers, loss, optimizer, metrics,
-          sample_weight_mode):
+          sample_weight_mode, **kwargs):
     print('Building Seq2Seq...')
 
     inputs = Input(shape=(None,), name='input')
@@ -95,7 +95,8 @@ def build(vocab_size, max_len, layers, loss, optimizer, metrics,
             output.append(Conv1D.from_config(conv1d_config)(x))
 
     # Model
-    model = Model(inputs=inputs, outputs=output)
+    model = Model(inputs=inputs, outputs=output,
+                  name=kwargs['name'] if 'name' in kwargs else 'seq2seq')
     model.compile(loss=loss, optimizer=deserialize_optimizers(optimizer),
                   metrics=metrics, sample_weight_mode=sample_weight_mode)
     return model

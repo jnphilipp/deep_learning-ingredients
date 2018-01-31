@@ -21,7 +21,8 @@ def config():
 
 
 @ingredients.capture(prefix='siamese')
-def build(inner_net_type, loss, optimizer, metrics, *args, **kwargs):
+def build(inner_net_type, loss, optimizer, metrics, output_names=['distance'],
+          *args, **kwargs):
     assert inner_net_type in ['cnn']
 
     print('Building Siamese [inner net type: %s]...' % inner_net_type)
@@ -35,10 +36,13 @@ def build(inner_net_type, loss, optimizer, metrics, *args, **kwargs):
 
     xr = inner_model(input_r)
     xl = inner_model(input_l)
-    x = Lambda(lambda x: K.mean(K.abs(x[0] - x[1]), axis=-1),
-               output_shape=(1,))([xr, xl])
 
-    siamese_model = Model(inputs=[input_r, input_l], outputs=x)
+    outputs = [Lambda(lambda x: K.mean(K.abs(x[0] - x[1]), axis=-1),
+                      name=output_names[i], output_shape=(1,))([xr, xl])
+               for i in range(len(output_names))]
+
+    siamese_model = Model(inputs=[input_r, input_l], outputs=outputs,
+                          name=kwargs['name'] if 'name' in kwargs else 'siamese')
     siamese_model.compile(loss=loss, optimizer=deserialize(optimizer),
                           metrics=metrics)
     return siamese_model

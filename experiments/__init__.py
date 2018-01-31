@@ -24,7 +24,10 @@ def save(path, models, train_history=None):
     try:
         for model in models:
             models_ingredients.save(path, model, model.name)
+            if train_history:
+                history.save(path, '%s-train_history' % model.name,
+                             train_history)
     except TypeError:
         models_ingredients.save(path, models)
-    if train_history:
-        history.save(path, 'train_history', train_history)
+        if train_history:
+            history.save(path, 'train_history', train_history)

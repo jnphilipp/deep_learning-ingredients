@@ -193,7 +193,8 @@ def build_combined(generator, discriminator, loss, optimizer, metrics):
 
     discriminator.trainable = False
     fake, prediction = discriminator(fake)
-    combined = Model(inputs=[image_class, latent], outputs=[fake, prediction])
+    combined = Model(inputs=[image_class, latent], outputs=[fake, prediction],
+                     name='gan')
     combined.compile(loss=loss, optimizer=deserialize(optimizer),
                      metrics=metrics)
     return combined

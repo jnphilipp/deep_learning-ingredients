@@ -43,7 +43,7 @@ def config():
 
 @ingredients.capture(prefix='rnn')
 def build(vocab_size, nb_classes, layers, loss, optimizer, metrics,
-          output_names=None):
+          output_names=None, **kwargs):
     print('Building RNN...')
 
     inputs = Input(shape=(None,), name='input')
@@ -63,9 +63,9 @@ def build(vocab_size, nb_classes, layers, loss, optimizer, metrics,
             losses.append('mse')
         else:
             losses.append(loss)
-        output = Dense.from_config(config)(x)
+        outputs = Dense.from_config(config)(x)
     else:
-        output = []
+        outputs = []
         for i, units in enumerate(nb_classes):
             config = layers['dense_config'].copy()
             if 'name' in config:
@@ -78,10 +78,11 @@ def build(vocab_size, nb_classes, layers, loss, optimizer, metrics,
                 losses.append('mse')
             else:
                 losses.append(loss)
-            output.append(Dense.from_config(config)(vec))
+            outputs.append(Dense.from_config(config)(vec))
 
     # Model
-    model = Model(inputs=inputs, outputs=output)
+    model = Model(inputs=inputs, outputs=outputs,
+                  name=kwargs['name'] if 'name' in kwargs else 'rnn')
     model.compile(loss=losses, optimizer=deserialize_optimizers(optimizer),
                   metrics=metrics)
     return model

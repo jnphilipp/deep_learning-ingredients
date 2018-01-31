@@ -123,7 +123,8 @@ def build_cnn(grayscale, rows, cols, blocks, nb_classes, layers, outputs, loss,
                                                        'name': 'mask'}))(x))
 
     # Model
-    model = Model(inputs=inputs, outputs=otensors)
+    model = Model(inputs=inputs, outputs=otensors,
+                  name=kwargs['name'] if 'name' in kwargs else 'cnn')
     model.compile(loss=loss, optimizer=deserialize(optimizer), metrics=metrics)
     return model
 
@@ -187,6 +188,7 @@ def build_densely(grayscale, rows, cols, blocks, nb_classes, layers, loss,
                                                        'name': 'mask'}))(x))
 
     # Model
-    model = Model(inputs=inputs, outputs=otensors)
+    model = Model(inputs=inputs, outputs=otensors,
+                  name=kwargs['name'] if 'name' in kwargs else 'cnn')
     model.compile(loss=loss, optimizer=deserialize(optimizer), metrics=metrics)
     return model
