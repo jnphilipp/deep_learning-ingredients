@@ -43,8 +43,8 @@ def load(path, _log):
 
 @ingredients.capture
 def save(path, model, name=None):
-    with open(os.path.join(path, '%s.json' % (name if name else 'model')),
-              'w', encoding='utf8') as f:
+    with open(os.path.join(path, '%s.json' % (name if name else 'model')), 'w',
+              encoding='utf8') as f:
         f.write(model.to_json())
         f.write('\n')
 
@@ -85,7 +85,6 @@ def make_function(model, input_layers, output_layers):
             inputs.append(get_layer(layer).get_input_at(layer['node_index']))
         else:
             inputs.append(get_layer(layer).input)
-
     inputs.append(K.learning_phase())
 
     outputs = []
@@ -98,5 +97,4 @@ def make_function(model, input_layers, output_layers):
             outputs.append(get_layer(layer).get_output_at(layer['node_index']))
         else:
             outputs.append(get_layer(layer).output)
-
     return K.function(inputs, outputs)

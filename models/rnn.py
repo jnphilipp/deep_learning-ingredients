@@ -63,7 +63,7 @@ def build(vocab_size, nb_classes, layers, loss, optimizer, metrics,
             losses.append('mse')
         else:
             losses.append(loss)
-        outputs = Dense.from_config(config)(x)
+        outputs = Dense.from_config(config)(vec)
     else:
         outputs = []
         for i, units in enumerate(nb_classes):
