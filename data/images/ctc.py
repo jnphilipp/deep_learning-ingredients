@@ -38,12 +38,12 @@ def paint_text(text, height, width, fonts, font_size, font_rgb, rg):
 
         max_shift_x = (width // 3) - abs(box[0])
         top_left_x = min(max(np.random.normal(max_shift_x // 2,
-                                              max(max_shift_x // 4, 0)),
+                                              max(max_shift_x // 4, 0.001)),
                              abs(box[0])), max_shift_x)
 
         max_shift_y = height - abs(box[1])
         top_left_y = min(max(np.random.normal(max_shift_y // 2,
-                                              max(max_shift_y // 4, 0)),
+                                              max(max_shift_y // 4, 0.001)),
                              abs(box[1])), height)
 
         context.move_to(top_left_x, top_left_y)
