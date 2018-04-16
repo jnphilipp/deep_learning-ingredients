@@ -64,7 +64,7 @@ def build(nb_classes, net_type, *args, **kwargs):
 
 @ingredients.capture(prefix='cnn')
 def build_cnn(grayscale, rows, cols, blocks, nb_classes, layers, outputs, loss,
-              optimizer, metrics):
+              optimizer, metrics, *args, **kwargs):
     assert set(outputs).issubset(['class', 'image', 'mask'])
 
     filters = 1 if grayscale else 3
@@ -131,7 +131,7 @@ def build_cnn(grayscale, rows, cols, blocks, nb_classes, layers, outputs, loss,
 
 @ingredients.capture(prefix='cnn')
 def build_densely(grayscale, rows, cols, blocks, nb_classes, layers, loss,
-                  outputs, optimizer, metrics):
+                  outputs, optimizer, metrics, *args, **kwargs):
     assert set(outputs).issubset(['class', 'image', 'mask'])
 
     filters = 1 if grayscale else 3

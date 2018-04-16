@@ -38,12 +38,12 @@ def paint_text(text, height, width, fonts, font_size, font_rgb, rg):
 
         max_shift_x = (width // 3) - abs(box[0])
         top_left_x = min(max(np.random.normal(max_shift_x // 2,
-                                              max_shift_x // 4),
+                                              max(max_shift_x // 4, 0)),
                              abs(box[0])), max_shift_x)
 
         max_shift_y = height - abs(box[1])
         top_left_y = min(max(np.random.normal(max_shift_y // 2,
-                                              max_shift_y // 4),
+                                              max(max_shift_y // 4, 0)),
                              abs(box[1])), height)
 
         context.move_to(top_left_x, top_left_y)
@@ -71,35 +71,43 @@ def paint_text(text, height, width, fonts, font_size, font_rgb, rg):
                            channel_axis=channel_axis)
 
 
-def generator(backgrounds, text_generator, font_size, font_rgb, N, shape,
-              mask_shape, batch_size=128):
-    if K.image_data_format() == 'channels_first':
-        r = shape[1]
-        c = shape[2]
-    elif K.image_data_format() == 'channels_last':
-        r = shape[0]
-        c = shape[1]
+def get_generator(backgrounds, text_generator, font_size, font_rgb):
+    def generator(N, shape, mask_shape, batch_size=128):
+        if K.image_data_format() == 'channels_first':
+            r = shape[1]
+            c = shape[2]
+        elif K.image_data_format() == 'channels_last':
+            r = shape[0]
+            c = shape[1]
 
-    b = 0
-    while True:
-        current_index = (b * batch_size) % N
-        current_batch_size = batch_size if N >= current_index + batch_size \
-            else N - current_index
-        b = b + 1 if current_batch_size == batch_size else 0
+        b = 0
+        while True:
+            current_index = (b * batch_size) % N
+            current_batch_size = batch_size if N >= current_index + batch_size \
+                else N - current_index
+            b = b + 1 if current_batch_size == batch_size else 0
 
-        bX = np.zeros((current_batch_size,) + tuple(shape))
-        bmasks = np.zeros((current_batch_size,) + mask_shape)
-        for i in range(current_batch_size):
-            text_img = paint_text(text_generator(), r, c, font_size=font_size(),
-                                  font_rgb=font_rgb())
-            bX[i] = text_img * patch(np.random.choice(backgrounds) / 255, r, c)[0]
-            if K.image_data_format() == 'channels_first':
-                bmasks[i] = np.dot(text_img[:3,...],
-                                   [0.299, 0.587, 0.114]).reshape(mask_shape)
-            elif K.image_data_format() == 'channels_last':
-                bmasks[i] = np.dot(text_img[...,:3],
-                                   [0.299, 0.587, 0.114]).reshape(mask_shape)
+            bX = np.zeros((current_batch_size,) + tuple(shape))
+            bmasks = np.zeros((current_batch_size,) + mask_shape)
+            for i in range(current_batch_size):
+                text_img = paint_text(text_generator(), r, c,
+                                      font_size=font_size(),
+                                      font_rgb=font_rgb())
+                bX[i] = text_img * patch(
+                    np.random.choice(backgrounds) / 255, r, c
+                )[0]
+                if K.image_data_format() == 'channels_first':
+                    bmasks[i] = np.dot(
+                        text_img[:3,...], [0.299, 0.587, 0.114]
+                    ).reshape(mask_shape)
+                elif K.image_data_format() == 'channels_last':
+                    bmasks[i] = np.dot(
+                        text_img[...,:3], [0.299, 0.587, 0.114]
+                    ).reshape(mask_shape)
 
-        bmasks[bmasks < .9] = 0.
-        bmasks[bmasks >= .9] = 1.
-        yield bX, bmasks
+            bmasks[bmasks < .9] = 0.
+            bmasks[bmasks >= .9] = 1.
+            bmasks = 1 - bmasks
+            yield bX, bmasks
+
+    return generator
