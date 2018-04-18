@@ -10,8 +10,8 @@ from ingredients.models import ingredients
 
 
 @ingredients.capture
-def build(grayscale, rows, cols, blocks, layers, outputs, loss, optimizer,
-          metrics, _log, *args, **kwargs):
+def build(grayscale, rows, cols, blocks, layers, outputs, optimizer, _log,
+          *args, **kwargs):
     if 'name' in kwargs:
         _log.info('Build CNN model [%s]' % kwargs['name'])
     else:
@@ -53,11 +53,17 @@ def build(grayscale, rows, cols, blocks, layers, outputs, loss, optimizer,
             cols = math.ceil(cols / layers['strides'][1])
 
     # outputs
-    assert set([o['t'] for o in outputs]).issubset(['class', 'image', 'mask',
-                                                    'vec'])
+    output_types = ['class', 'image', 'mask', 'vec']
+    assert set([o['t'] for o in outputs]).issubset(output_types)
 
     outs = []
-    for i, output in enumerate(outputs):
+    loss = []
+    metrics = []
+    for output in outputs:
+        loss.append(output['loss'])
+        if 'metrics' in output:
+            metrics.append(output['metrics'])
+
         if output['t'] == 'class':
             conf = dict(layers['conv2d_config'],
                         **{'filters': output['nb_classes'],

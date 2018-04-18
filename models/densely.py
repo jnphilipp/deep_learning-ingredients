@@ -2,6 +2,7 @@
 
 import math
 
+from copy import deepcopy
 from keras import backend as K
 from keras.layers import *
 from keras.models import Model
@@ -10,8 +11,8 @@ from ingredients.models import ingredients
 
 
 @ingredients.capture
-def build(grayscale, rows, cols, blocks, layers, outputs, loss,  optimizer,
-          metrics, *args, **kwargs):
+def build(grayscale, rows, cols, blocks, layers, outputs, optimizer, _log,
+          *args, **kwargs):
     if 'name' in kwargs:
         _log.info('Build DenselyCNN model [%s]' % kwargs['name'])
     else:
@@ -45,11 +46,15 @@ def build(grayscale, rows, cols, blocks, layers, outputs, loss,  optimizer,
             cols = math.ceil(cols / layers['strides'][1])
 
     # outputs
-    assert set([o['t'] for o in outputs]).issubset(['class', 'image', 'mask',
-                                                    'vec'])
+    output_types = ['class', 'image', 'mask', 'vec']
+    assert set([o['t'] for o in outputs]).issubset(output_types)
 
     outs = []
-    for i, output in enumerate(outputs):
+    for output in outputs:
+        loss.append(output['loss'])
+        if 'metrics' in output:
+            metrics.append(output['metrics'])
+
         if output['t'] == 'class':
             x = Conv2D.from_config(dict(layers['conv2d_config'],
                                    **{'filters': output['nb_classes'],
