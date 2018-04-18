@@ -6,23 +6,25 @@ import sys
 from keras import backend as K
 from keras.models import load_model
 from keras.utils import plot_model
-from ingredients.models import ingredients
+from ingredients.models import cnn, densely, ingredients
 
 
 @ingredients.config
 def config():
-    summary = False
     path = None
 
 
 @ingredients.capture
-def get(build_func, summary, path, *args, **kwargs):
-    if build_func and not path:
-        model = build_func(*args, **kwargs)
+def get(path, net_type, *args, **kwargs):
+    assert net_type in ['cnn', 'densely']
+
+    if not path or not os.path.exists(path):
+        if net_type == 'cnn':
+            model = cnn.build(*args, **kwargs)
+        elif net_type == 'densely':
+            model = densely.build(*args, **kwargs)
     else:
         model = load()
-    if summary:
-        model.summary()
     return model
 
 
@@ -42,7 +44,9 @@ def load(path, _log):
 
 
 @ingredients.capture
-def save(path, model, name=None):
+def save(path, model, _log, name=None):
+    _log.info('Save model [%s]' % name if name else 'Save model')
+
     with open(os.path.join(path, '%s.json' % (name if name else 'model')), 'w',
               encoding='utf8') as f:
         f.write(model.to_json())
@@ -59,12 +63,15 @@ def save(path, model, name=None):
 
 
 @ingredients.capture
-def plot(model, path, name='model'):
+def plot(model, path, _log, name='model'):
+    _log.info('Plot %s' % name)
     plot_model(model, to_file=os.path.join(path, '%s.png' % name))
 
 
 @ingredients.capture
-def make_function(model, input_layers, output_layers):
+def make_function(model, input_layers, output_layers, _log):
+    _log.info('Make function')
+
     def get_layer(config):
         if 'name' in layer:
             return model.get_layer(layer['name'])

@@ -3,69 +3,19 @@
 import math
 
 from keras import backend as K
-from keras.layers import (concatenate, Activation, AlphaDropout, Conv2D,
-                          Conv2DTranspose as Conv2DT, Flatten, GaussianNoise,
-                          Input)
+from keras.layers import *
 from keras.models import Model
 from keras.optimizers import deserialize
-from ingredients.layers import cnn, densely
 from ingredients.models import ingredients
 
 
-@ingredients.config
-def config():
-    cnn = {
-        'layers': {
-            'N': 10,
-            'k': 12,
-            'bottleneck': 4,
-            'gaussian_noise_config': {
-                'stddev': 0.3
-            },
-            'bn_config': {
-                'axis': 1 if K.image_data_format() == 'channels_first' else -1
-            },
-            'bottleneck2d_config': {
-                'kernel_size': (1, 1),
-                'padding': 'same'
-            },
-            'conv2d_config': {
-                'kernel_size': (3, 3),
-                'padding': 'same'
-            },
-            'strides': (2, 2),
-            'activation': 'tanh',
-            'p_activation': 'softmax',
-            'theta': 0.5,
-            'concat_axis': 1 if K.image_data_format() == 'channels_first'
-            else -1
-        },
-        'net_type': 'densely',
-        'outputs': ['class'],
-        'loss': 'categorical_crossentropy',
-        'optimizer': {
-            'class_name': 'adam',
-            'config': {}
-        },
-        'metrics': ['accuracy']
-    }
-
-
-@ingredients.capture(prefix='cnn')
-def build(nb_classes, net_type, *args, **kwargs):
-    assert net_type in ['cnn', 'densely']
-
-    print('Building CNN [net type: %s]...' % net_type)
-    if net_type == 'cnn':
-        return build_cnn(nb_classes=nb_classes, **kwargs)
-    elif net_type == 'densely':
-        return build_densely(nb_classes=nb_classes, **kwargs)
-
-
-@ingredients.capture(prefix='cnn')
-def build_cnn(grayscale, rows, cols, blocks, nb_classes, layers, outputs, loss,
-              optimizer, metrics, *args, **kwargs):
-    assert set(outputs).issubset(['class', 'image', 'mask'])
+@ingredients.capture
+def build(grayscale, rows, cols, blocks, layers, outputs, loss, optimizer,
+          metrics, _log, *args, **kwargs):
+    if 'name' in kwargs:
+        _log.info('Build CNN model [%s]' % kwargs['name'])
+    else:
+        _log.info('Build CNN model')
 
     filters = 1 if grayscale else 3
     if K.image_data_format() == 'channels_first':
@@ -79,31 +29,51 @@ def build_cnn(grayscale, rows, cols, blocks, nb_classes, layers, outputs, loss,
     else:
         x = inputs
 
+    if type(layers['filters']) == list:
+        assert len(layers['filters']) == blocks
+
     shortcuts = []
     for i in range(blocks):
-        if 'bn_config' in layers and layers['bn_config']:
-            x = cnn.block2d_bn(x, pool=i != blocks - 1, shortcuts=shortcuts,
-                               **layers)
+        if type(layers['filters']) == list:
+            conf = dict(layers, **{'filters': layers['filters'][i]})
         else:
-            x = cnn.block2d(x, pool=i != blocks - 1, shortcuts=shortcuts,
-                            **layers)
+            conf = layers
+
+        pool = i != blocks - 1
+        if 'bn_config' in layers and layers['bn_config']:
+            x = block2d_bn(x, pool=pool, shortcuts=shortcuts, **conf)
+        else:
+            x = block2d(x, pool=pool, shortcuts=shortcuts, **conf)
+
         if 'alpha_dropout_config' in layers and layers['alpha_dropout_config']:
             x = AlphaDropout.from_config(layers['alpha_dropout_config'])(x)
+
         if i != blocks - 1:
             rows = math.ceil(rows / layers['strides'][0])
             cols = math.ceil(cols / layers['strides'][1])
 
-    # output
-    otensors = []
+    # outputs
+    assert set([o['t'] for o in outputs]).issubset(['class', 'image', 'mask',
+                                                    'vec'])
+
+    outs = []
     for i, output in enumerate(outputs):
-        if output == 'class':
-            x = Conv2D(nb_classes, (int(rows), int(cols)))(x)
+        if output['t'] == 'class':
+            conf = dict(layers['conv2d_config'],
+                        **{'filters': output['nb_classes'],
+                           'kernel_size': (int(rows), int(cols)),
+                           'padding': 'valid'})
+            x = Conv2D.from_config(conf)(x)
             x = Flatten()(x)
-            otensors.append(Activation(layers['p_activation'], name='p')(x))
-        elif output == 'image':
-            otensors.append(Conv2D(1 if grayscale else 3, (1, 1),
-                            padding='same', activation='sigmoid')(x))
-        elif output == 'mask':
+            outs.append(Activation(output['activation'], name='p')(x))
+        elif output['t'] == 'image':
+            conf = dict(layers['conv2d_config'],
+                        **{'filters': 1 if output['grayscale'] else 3,
+                           'kernel_size': (1, 1),
+                           'padding': 'same',
+                           'activation': output['activation']})
+            outs.append(Conv2D.from_config(conf)(x))
+        elif output['t'] == 'mask':
             for i in reversed(range(blocks)):
                 shortcut = shortcuts[i][0]
                 filters = shortcuts[i - 1 if i >= 0 else 0][1]
@@ -114,81 +84,96 @@ def build_cnn(grayscale, rows, cols, blocks, nb_classes, layers, outputs, loss,
                 if i > 0:
                     conf = dict(layers['conv2d_config'],
                                 **{'filters': filters,
-                                   'strides': layers['strides'],
-                                   'activation': layers['activation']})
-                    x = Conv2DT.from_config(conf)(x)
-            otensors.append(Conv2D.from_config(dict(layers['conv2d_config'],
-                                                    **{'filters': 1,
-                                                       'activation': 'sigmoid',
-                                                       'name': 'mask'}))(x))
+                                   'strides': layers['strides']})
+                    x = Conv2DTranspose.from_config(conf)(x)
+            outs.append(Conv2D.from_config(dict(layers['conv2d_config'],
+                                                **{'filters': 1,
+                                                   'activation': 'sigmoid',
+                                                   'name': 'mask'}))(x))
+        elif output['t'] == 'vec':
+            outs.append(x)
 
     # Model
-    model = Model(inputs=inputs, outputs=otensors,
+    model = Model(inputs=inputs, outputs=outs,
                   name=kwargs['name'] if 'name' in kwargs else 'cnn')
     model.compile(loss=loss, optimizer=deserialize(optimizer), metrics=metrics)
     return model
 
 
-@ingredients.capture(prefix='cnn')
-def build_densely(grayscale, rows, cols, blocks, nb_classes, layers, loss,
-                  outputs, optimizer, metrics, *args, **kwargs):
-    assert set(outputs).issubset(['class', 'image', 'mask'])
+@ingredients.capture(prefix='layers')
+def conv2d(x, filters, conv2d_config):
+    return Conv2D.from_config(dict(conv2d_config, **{'filters': filters}))(x)
 
-    filters = 1 if grayscale else 3
-    if K.image_data_format() == 'channels_first':
-        input_shape = (filters, rows, cols)
+
+@ingredients.capture(prefix='layers')
+def conv2d_bn(x, filters, bn_config, conv2d_config, activation):
+    x = Conv2D.from_config(dict(conv2d_config, **{'filters': filters}))(x)
+    x = BatchNormalization.from_config(bn_config)(x)
+    return Activation(activation)(x)
+
+
+@ingredients.capture(prefix='layers')
+def block2d(inputs, filters, N, conv2d_config, strides, pool, *args, **kwargs):
+    for j in range(N):
+        x = conv2d(inputs if j == 0 else x, filters, conv2d_config)
+
+    if 'shortcuts' in kwargs:
+        kwargs['shortcuts'].append((x, filters))
+
+    if pool:
+        return Conv2D.from_config(dict(conv2d_config,
+                                       **{'filters': filters,
+                                          'strides': strides}))(x)
     else:
-        input_shape = (rows, cols, filters)
+        return x
 
-    inputs = Input(shape=input_shape, name='input')
-    if 'gaussian_noise_config' in layers and layers['gaussian_noise_config']:
-        x = GaussianNoise.from_config(layers['gaussian_noise_config'])(inputs)
+
+@ingredients.capture(prefix='layers')
+def block2d_bn(inputs, filters, N, bn_config, conv2d_config, activation,
+               strides, pool, *args, **kwargs):
+    for j in range(N):
+        x = conv2d_bn(inputs if j == 0 else x, filters, bn_config,
+                      conv2d_config, activation)
+
+    if 'shortcuts' in kwargs:
+        kwargs['shortcuts'].append((x, filters))
+
+    if pool:
+        x = Conv2D.from_config(dict(conv2d_config,
+                                    **{'filters': filters,
+                                       'strides': strides}))(x)
+        x = BatchNormalization.from_config(bn_config)(x)
+        return Activation(activation)(x)
     else:
-        x = inputs
+        return x
 
-    shortcuts = []
-    for i in range(blocks):
-        if 'bn_config' in layers and layers['bn_config']:
-            x, filters = densely.block2d_bn(x, filters, pool=i != blocks - 1,
-                                            shortcuts=shortcuts, **layers)
-        else:
-            x, filters = densely.block2d(x, filters, pool=i != blocks - 1,
-                                         shortcuts=shortcuts, **layers)
-        if i != blocks - 1:
-            rows = math.ceil(rows / layers['strides'][0])
-            cols = math.ceil(cols / layers['strides'][1])
 
-    # output
-    otensors = []
-    for i, output in enumerate(outputs):
-        if output == 'class':
-            x = Conv2D(nb_classes, (int(rows), int(cols)))(x)
-            x = Flatten()(x)
-            otensors.append(Activation(layers['p_activation'], name='p')(x))
-        elif output == 'image':
-            otensors.append(Conv2D(1 if grayscale else 3, (1, 1),
-                            padding='same', activation='sigmoid')(x))
-        elif output == 'mask':
-            for i in reversed(range(blocks)):
-                shortcut = shortcuts[i][0]
-                filters = shortcuts[i - 1 if i >= 0 else 0][1]
-                if i is not blocks - 1:
-                    x = concatenate([x, shortcut], axis=layers['concat_axis'])
-                else:
-                    x = shortcut
-                if i > 0:
-                    conf = dict(layers['conv2d_config'],
-                                **{'filters': filters,
-                                   'strides': layers['strides'],
-                                   'activation': layers['activation']})
-                    x = Conv2DT.from_config(conf)(x)
-            otensors.append(Conv2D.from_config(dict(layers['conv2d_config'],
-                                                    **{'filters': 1,
-                                                       'activation': 'sigmoid',
-                                                       'name': 'mask'}))(x))
+@ingredients.capture(prefix='layers')
+def upblock2d(inputs, filters, N, conv2d_config, strides, transpose, *args,
+              **kwargs):
+    for j in range(N):
+        x = conv2d(inputs if j == 0 else x, filters, conv2d_config)
 
-    # Model
-    model = Model(inputs=inputs, outputs=otensors,
-                  name=kwargs['name'] if 'name' in kwargs else 'cnn')
-    model.compile(loss=loss, optimizer=deserialize(optimizer), metrics=metrics)
-    return model
+    if transpose:
+        return Conv2DTranspose.from_config(dict(conv2d_config,
+                                           **{'filters': filters,
+                                              'strides': strides}))(x)
+    else:
+        return x
+
+
+@ingredients.capture(prefix='layers')
+def upblock2d_bn(inputs, filters, N, bn_config, conv2d_config, activation,
+                 strides, transpose, *args, **kwargs):
+    for j in range(N):
+        x = conv2d_bn(inputs if j == 0 else x, filters, bn_config,
+                      conv2d_config, activation)
+
+    if transpose:
+        x = Conv2DTranspose.from_config(dict(conv2d_config,
+                                        **{'filters': filters,
+                                           'strides': strides}))(x)
+        x = BatchNormalization.from_config(bn_config)(x)
+        return Activation(activation)(x)
+    else:
+        return x
