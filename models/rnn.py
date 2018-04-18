@@ -1,88 +1,59 @@
 # -*- coding: utf-8 -*-
 
+from copy import deepcopy
 from keras import backend as K
-from keras.layers import (deserialize as deserialize_layers, Dense, Embedding,
+from keras.layers import (deserialize as deserialize_layer, Dense, Embedding,
                           Input, SpatialDropout1D)
 from keras.models import Model
 from keras.optimizers import deserialize as deserialize_optimizers
 from ingredients.models import ingredients
 
 
-@ingredients.config
-def config():
-    rnn = {
-        'layers': {
-            'embedding_config': {
-                'output_dim': 128,
-                'mask_zero': True,
-                'name': 'embedding'
-            },
-            'embedding_dropout': 0.1,
-            'recurrent_config': {
-                'class_name': 'GRU',
-                'config': {
-                    'units': 512,
-                    'dropout': 0.1,
-                    'recurrent_dropout': 0.1,
-                    'name': 'gru'
-                }
-            },
-            'dense_config': {
-                'activation': 'softmax',
-                'name': 'output'
-            }
-        },
-        'loss': 'categorical_crossentropy',
-        'optimizer': {
-            'class_name': 'adam',
-            'config': {}
-        },
-        'metrics': ['accuracy']
-    }
-
-
-@ingredients.capture(prefix='rnn')
-def build(vocab_size, nb_classes, layers, loss, optimizer, metrics,
-          output_names=None, **kwargs):
-    print('Building RNN...')
+@ingredients.capture
+def build(vocab_size, N, layers, outputs, optimizer, _log, *args, **kwargs):
+    if 'name' in kwargs:
+        _log.info('Build RNN model [%s]' % kwargs['name'])
+    else:
+        _log.info('Build RNN model')
 
     inputs = Input(shape=(None,), name='input')
     x = Embedding.from_config(dict(layers['embedding_config'],
                                    **{'input_dim': vocab_size}))(inputs)
     if layers['embedding_dropout']:
         x = SpatialDropout1D(rate=layers['embedding_dropout'])(x)
-    vec = deserialize_layers(layers['recurrent_config'])(x)
 
-    losses = []
-    if type(nb_classes) == int:
-        config = dict(layers['dense_config'].copy(), **{'units': nb_classes})
-        if output_names:
-            config['name'] = output_names
-        if nb_classes == 1:
-            config['activation'] = 'sigmoid'
-            losses.append('mse')
-        else:
-            losses.append(loss)
-        outputs = Dense.from_config(config)(vec)
-    else:
-        outputs = []
-        for i, units in enumerate(nb_classes):
-            config = layers['dense_config'].copy()
-            if 'name' in config:
-                config['name'] += str(i)
-            config = dict(config, **{'units': units})
-            if output_names:
-                config['name'] = output_names[i]
-            if units == 1:
-                config['activation'] = 'sigmoid'
-                losses.append('mse')
-            else:
-                losses.append(loss)
-            outputs.append(Dense.from_config(config)(vec))
+    for i in range(N):
+        layer = deepcopy(layers['recurrent_config'])
+        if i != N - 1:
+            layer['config']['return_sequences'] = True
+        x = deserialize_layer(layer)(x)
+
+    # outputs
+    output_types = ['class', 'image', 'mask', 'vec']
+    assert set([o['t'] for o in outputs]).issubset(output_types)
+
+    outs = []
+    loss = []
+    metrics = []
+    for output in outputs:
+        loss.append(output['loss'])
+        if 'metrics' in output:
+            metrics.append(output['metrics'])
+
+        if output['t'] == 'class':
+            layer = deepcopy(layers[output['layer']])
+            layer['config']['units'] = output['nb_classes']
+            if 'activation' in output:
+                layer['config']['activation'] = output['activation']
+            if 'name' in output:
+                layer['config']['name'] = output['name']
+            outs.append(deserialize_layer(layer)(x))
+        elif output['t'] == 'vec':
+            outs.append(x)
 
     # Model
-    model = Model(inputs=inputs, outputs=outputs,
+    model = Model(inputs=inputs, outputs=outs,
                   name=kwargs['name'] if 'name' in kwargs else 'rnn')
-    model.compile(loss=losses, optimizer=deserialize_optimizers(optimizer),
+    model.compile(loss=loss, optimizer=deserialize_optimizers(optimizer),
                   metrics=metrics)
     return model

@@ -6,7 +6,7 @@ import sys
 from keras import backend as K
 from keras.models import load_model
 from keras.utils import plot_model
-from ingredients.models import cnn, densely, ingredients
+from ingredients.models import cnn, densely, ingredients, rnn
 
 
 @ingredients.config
@@ -16,13 +16,15 @@ def config():
 
 @ingredients.capture
 def get(path, net_type, *args, **kwargs):
-    assert net_type in ['cnn', 'densely']
+    assert net_type in ['cnn', 'densely', 'rnn']
 
     if not path or not os.path.exists(path):
         if net_type == 'cnn':
             model = cnn.build(*args, **kwargs)
         elif net_type == 'densely':
             model = densely.build(*args, **kwargs)
+        elif net_type == 'rnn':
+            model = rnn.build(*args, **kwargs)
     else:
         model = load()
     return model
