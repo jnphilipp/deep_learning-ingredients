@@ -11,7 +11,8 @@ from ingredients.models import ingredients
 
 @ingredients.capture
 def build(grayscale, rows, cols, blocks, layers, outputs, optimizer, _log,
-          *args, **kwargs):
+          loss_weights=None, sample_weight_mode=None, weighted_metrics=None,
+          target_tensors=None, *args, **kwargs):
     if 'name' in kwargs:
         _log.info('Build CNN model [%s]' % kwargs['name'])
     else:
@@ -102,7 +103,11 @@ def build(grayscale, rows, cols, blocks, layers, outputs, optimizer, _log,
     # Model
     model = Model(inputs=inputs, outputs=outs,
                   name=kwargs['name'] if 'name' in kwargs else 'cnn')
-    model.compile(loss=loss, optimizer=deserialize(optimizer), metrics=metrics)
+    model.compile(loss=loss, optimizer=deserialize(optimizer), metrics=metrics,
+                  loss_weights=loss_weights,
+                  sample_weight_mode=sample_weight_mode,
+                  weighted_metrics=weighted_metrics,
+                  target_tensors=target_tensors)
     return model
 
 

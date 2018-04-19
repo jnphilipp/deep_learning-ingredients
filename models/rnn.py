@@ -10,7 +10,9 @@ from ingredients.models import ingredients
 
 
 @ingredients.capture
-def build(vocab_size, N, layers, outputs, optimizer, _log, *args, **kwargs):
+def build(vocab_size, N, layers, outputs, optimizer, _log, loss_weights=None,
+          sample_weight_mode=None, weighted_metrics=None, target_tensors=None,
+          *args, **kwargs):
     if 'name' in kwargs:
         _log.info('Build RNN model [%s]' % kwargs['name'])
     else:
@@ -29,7 +31,7 @@ def build(vocab_size, N, layers, outputs, optimizer, _log, *args, **kwargs):
         x = deserialize_layer(layer)(x)
 
     # outputs
-    output_types = ['class', 'image', 'mask', 'vec']
+    output_types = ['class', 'vec']
     assert set([o['t'] for o in outputs]).issubset(output_types)
 
     outs = []
@@ -55,5 +57,8 @@ def build(vocab_size, N, layers, outputs, optimizer, _log, *args, **kwargs):
     model = Model(inputs=inputs, outputs=outs,
                   name=kwargs['name'] if 'name' in kwargs else 'rnn')
     model.compile(loss=loss, optimizer=deserialize_optimizers(optimizer),
-                  metrics=metrics)
+                  metrics=metrics, loss_weights=loss_weights,
+                  sample_weight_mode=sample_weight_mode,
+                  weighted_metrics=weighted_metrics,
+                  target_tensors=target_tensors)
     return model
