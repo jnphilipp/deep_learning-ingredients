@@ -6,7 +6,7 @@ import sys
 from keras import backend as K
 from keras.models import load_model
 from keras.utils import plot_model
-from ingredients.models import cnn, densely, ingredients, rnn
+from ingredients.models import cnn, densely, ingredients, rnn, seq2seq
 
 
 @ingredients.config
@@ -16,7 +16,7 @@ def config():
 
 @ingredients.capture
 def get(path, net_type, *args, **kwargs):
-    assert net_type in ['cnn', 'densely', 'rnn']
+    assert net_type in ['cnn', 'densely', 'rnn', 'seq2seq']
 
     if not path or not os.path.exists(path):
         if net_type == 'cnn':
@@ -25,6 +25,8 @@ def get(path, net_type, *args, **kwargs):
             model = densely.build(*args, **kwargs)
         elif net_type == 'rnn':
             model = rnn.build(*args, **kwargs)
+        elif net_type == 'seq2seq':
+            model = seq2seq.build(*args, **kwargs)
     else:
         model = load()
     return model
