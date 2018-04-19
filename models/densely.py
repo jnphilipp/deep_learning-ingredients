@@ -51,6 +51,8 @@ def build(grayscale, rows, cols, blocks, layers, outputs, optimizer, _log,
     assert set([o['t'] for o in outputs]).issubset(output_types)
 
     outs = []
+    loss = []
+    metrics = []
     for output in outputs:
         loss.append(output['loss'])
         if 'metrics' in output:
