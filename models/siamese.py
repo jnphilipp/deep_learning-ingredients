@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from keras import backend as K
-from keras.layers import Activation, Input, Lambda
+from keras.layers import Input, Lambda
 from keras.models import Model
 from keras.optimizers import deserialize
 from ingredients import models
@@ -17,7 +17,7 @@ def build(inner_net_type, outputs, optimizer, _log, loss_weights=None,
         del kwargs['name']
         _log.info('Build Siamese [%s] model [%s]' % (inner_net_type, name))
     else:
-        name = None
+        name = 'siamese'
         _log.info('Build Siamese [%s] model' % inner_net_type)
 
     inner_model = models.get(None, inner_net_type,
@@ -49,8 +49,7 @@ def build(inner_net_type, outputs, optimizer, _log, loss_weights=None,
                                name=output['name'],
                                output_shape=(1,))([xr, xl]))
 
-    siamese_model = Model(inputs=[input_r, input_l], outputs=outs,
-                          name=name if name else 'siamese')
+    siamese_model = Model(inputs=[input_r, input_l], outputs=outs, name=name)
     siamese_model.compile(loss=loss, optimizer=deserialize(optimizer),
                           metrics=metrics, loss_weights=loss_weights,
                           sample_weight_mode=sample_weight_mode,
