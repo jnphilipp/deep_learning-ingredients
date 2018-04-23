@@ -55,4 +55,4 @@ def build(inner_net_type, outputs, optimizer, _log, loss_weights=None,
                           sample_weight_mode=sample_weight_mode,
                           weighted_metrics=weighted_metrics,
                           target_tensors=target_tensors)
-    return siamese_model, inner_model
+    return inner_model, siamese_model
