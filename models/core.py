@@ -6,8 +6,8 @@ import sys
 from keras import backend as K
 from keras.models import load_model
 from keras.utils import plot_model
-from ingredients.models import (cnn, dense, densely, ingredients, rnn, seq2seq,
-                                siamese)
+from ingredients.models import (autoencoder, cnn, dense, densely, ingredients,
+                                rnn, seq2seq, siamese)
 
 
 @ingredients.config
@@ -17,11 +17,14 @@ def config():
 
 @ingredients.capture
 def get(path, net_type, *args, **kwargs):
-    net_types = ['cnn', 'dense', 'densely', 'rnn', 'seq2seq', 'siamese']
+    net_types = ['autoencoder', 'cnn', 'dense', 'densely', 'rnn', 'seq2seq',
+                 'siamese']
     assert net_type in net_types
 
     if not path or not os.path.exists(path):
-        if net_type == 'cnn':
+        if net_type == 'autoencoder':
+            model = autoencoder.build(*args, **kwargs)
+        elif net_type == 'cnn':
             model = cnn.build(*args, **kwargs)
         elif net_type == 'dense':
             model = dense.build(*args, **kwargs)

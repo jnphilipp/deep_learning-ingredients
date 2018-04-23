@@ -31,6 +31,12 @@ def build(input_shape, N, layers, outputs, optimizer, _log, loss_weights=None,
         else:
             conf = layers['dense_config']
 
+        if 'output_shape' in kwargs and i == N - 1:
+            if type(kwargs['output_shape']) == tuple:
+                conf['units'] = kwargs['output_shape'][0]
+            else:
+                conf['units'] = kwargs['output_shape']
+
         x = Dense.from_config(conf)(x)
         if 'dropout' in layers:
             x = deserialize_layer(layers['dropout'])(x)
