@@ -46,18 +46,17 @@ def build(input_shape, N, layers, outputs, optimizer, _log, loss_weights=None,
 
     outs = []
     loss = []
-    metrics = []
+    metrics = {}
     for output in outputs:
         loss.append(output['loss'])
         if 'metrics' in output:
-            metrics.append(output['metrics'])
+            metrics[output['name']] = output['metrics']
 
         if output['t'] == 'class':
             conf = dict(layers['dense_config'],
                         **{'units': output['nb_classes'],
-                           'activation': output['activation']})
-            if 'name' in output:
-                conf['name'] = output['name']
+                           'activation': output['activation'],
+                           'name': output['name']})
             outs.append(Dense.from_config(conf)(x))
         elif output['t'] == 'vec':
             outs.append(x)

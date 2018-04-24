@@ -41,7 +41,7 @@ def build(vocab_size, N, layers, outputs, optimizer, _log,
 
     outs = []
     loss = []
-    metrics = []
+    metrics = {}
 
     conv1d_config = dict(layers['conv1d_config'],
                          **{'filters': vocab_size})
@@ -50,10 +50,9 @@ def build(vocab_size, N, layers, outputs, optimizer, _log,
     for i, output in enumerate(outputs):
         loss.append(output['loss'])
         if 'metrics' in output:
-            metrics.append(output['metrics'])
-        if 'name' in output:
-            conv1d_config['name'] = output['name']
+            metrics[output['name']] = output['metrics']
 
+        conv1d_config['name'] = output['name']
         if output['t'] == 'seq':
             x = RepeatVector.from_config(dict(layers['repeatvector_config'],
                                               **{'n': output['max_len']}))(vec)

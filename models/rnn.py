@@ -36,19 +36,18 @@ def build(vocab_size, N, layers, outputs, optimizer, _log, loss_weights=None,
 
     outs = []
     loss = []
-    metrics = []
+    metrics = {}
     for output in outputs:
         loss.append(output['loss'])
         if 'metrics' in output:
-            metrics.append(output['metrics'])
+            metrics[output['name']] = output['metrics']
 
         if output['t'] == 'class':
             layer = deepcopy(layers[output['layer']])
             layer['config']['units'] = output['nb_classes']
+            layer['config']['name'] = output['name']
             if 'activation' in output:
                 layer['config']['activation'] = output['activation']
-            if 'name' in output:
-                layer['config']['name'] = output['name']
             outs.append(deserialize_layer(layer)(x))
         elif output['t'] == 'vec':
             outs.append(x)

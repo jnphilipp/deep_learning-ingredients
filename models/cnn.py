@@ -57,11 +57,11 @@ def build(grayscale, rows, cols, blocks, layers, outputs, optimizer, _log,
 
     outs = []
     loss = []
-    metrics = []
+    metrics = {}
     for output in outputs:
         loss.append(output['loss'])
         if 'metrics' in output:
-            metrics.append(output['metrics'])
+            metrics[output['name']] = output['metrics']
 
         if output['t'] == 'class':
             conf = dict(layers['conv2d_config'],
@@ -70,13 +70,15 @@ def build(grayscale, rows, cols, blocks, layers, outputs, optimizer, _log,
                            'padding': 'valid'})
             x = Conv2D.from_config(conf)(x)
             x = Flatten()(x)
-            outs.append(Activation(output['activation'], name='p')(x))
+            outs.append(Activation(output['activation'],
+                                   name=output['name'])(x))
         elif output['t'] == 'image':
             conf = dict(layers['conv2d_config'],
                         **{'filters': 1 if output['grayscale'] else 3,
                            'kernel_size': (1, 1),
                            'padding': 'same',
-                           'activation': output['activation']})
+                           'activation': output['activation'],
+                           'name': output['name']})
             outs.append(Conv2D.from_config(conf)(x))
         elif output['t'] == 'mask':
             for i in reversed(range(blocks)):
@@ -91,10 +93,11 @@ def build(grayscale, rows, cols, blocks, layers, outputs, optimizer, _log,
                                 **{'filters': filters,
                                    'strides': layers['strides']})
                     x = Conv2DTranspose.from_config(conf)(x)
-            outs.append(Conv2D.from_config(dict(layers['conv2d_config'],
-                                                **{'filters': 1,
-                                                   'activation': 'sigmoid',
-                                                   'name': 'mask'}))(x))
+            conf = dict(layers['conv2d_config'],
+                        **{'filters': 1,
+                           'activation': 'sigmoid',
+                           'name': output['name']})
+            outs.append(Conv2D.from_config(conf)(x))
         elif output['t'] == 'vec':
             outs.append(x)
 

@@ -38,11 +38,11 @@ def build(inner_net_type, outputs, optimizer, _log, loss_weights=None,
 
     outs = []
     loss = []
-    metrics = []
+    metrics = {}
     for output in outputs:
         loss.append(output['loss'])
         if 'metrics' in output:
-            metrics.append(output['metrics'])
+            metrics[output['name']] = output['metrics']
 
         if output['t'] == 'distance':
             outs.append(Lambda(lambda x: K.mean(K.abs(x[0] - x[1]), axis=-1),
