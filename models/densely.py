@@ -109,10 +109,9 @@ def conv2d(x, k, bottleneck, bottleneck2d_config, conv2d_config, dropout=None):
     if bottleneck:
         x = Conv2D.from_config(dict(bottleneck2d_config,
                                     **{'filters': bottleneck * k}))(x)
-    x = Conv2D.from_config(dict(conv2d_config, **{'filters': k}))(x)
     if dropout and dropout['t'] == 'layerwise':
         x = deserialize_layer(dropout)(x)
-    return x
+    return Conv2D.from_config(dict(conv2d_config, **{'filters': k}))(x)
 
 
 @ingredients.capture(prefix='layers')
@@ -123,12 +122,11 @@ def conv2d_bn(x, k, bottleneck, bn_config, bottleneck2d_config, conv2d_config,
                                     **{'filters': bottleneck * k}))(x)
         x = BatchNormalization.from_config(bn_config)(x)
         x = Activation(activation)(x)
-    x = Conv2D.from_config(dict(conv2d_config, **{'filters': k}))(x)
-    x = BatchNormalization.from_config(bn_config)(x)
-    x = Activation(activation)(x)
     if dropout and dropout['t'] == 'layerwise':
         x = deserialize_layer(dropout)(x)
-    return x
+    x = Conv2D.from_config(dict(conv2d_config, **{'filters': k}))(x)
+    x = BatchNormalization.from_config(bn_config)(x)
+    return Activation(activation)(x)
 
 
 @ingredients.capture(prefix='layers')
@@ -149,11 +147,12 @@ def block2d(inputs, filters, N, k, bottleneck, bottleneck2d_config,
         if bottleneck:
             x = Conv2D.from_config(dict(bottleneck2d_config,
                                         **{'filters': filters}))(x)
+        if dropout and dropout['t'] == 'layerwise':
+            x = deserialize_layer(dropout)(x)
         x = Conv2D.from_config(dict(conv2d_config,
                                     **{'filters': filters,
                                        'strides': strides}))(x)
-        if dropout and (dropout['t'] == 'layerwise' or
-                        dropout['t'] == 'blockwise'):
+        if dropout and dropout['t'] == 'blockwise':
             x = deserialize_layer(dropout)(x)
         return x, filters
     else:
@@ -182,13 +181,14 @@ def block2d_bn(inputs, filters, N, k, bottleneck, bn_config,
                                         **{'filters': filters}))(x)
             x = BatchNormalization.from_config(bn_config)(x)
             x = Activation(activation)(x)
+        if dropout and dropout['t'] == 'layerwise':
+            x = deserialize_layer(dropout)(x)
         x = Conv2D.from_config(dict(conv2d_config,
                                     **{'filters': filters,
                                        'strides': strides}))(x)
         x = BatchNormalization.from_config(bn_config)(x)
         x = Activation(activation)(x)
-        if dropout and (dropout['t'] == 'layerwise' or
-                        dropout['t'] == 'blockwise'):
+        if dropout and dropout['t'] == 'blockwise':
             x = deserialize_layer(dropout)(x)
         return x, filters
     else:
@@ -211,10 +211,12 @@ def upblock2d(inputs, filters, N, k, bottleneck, bottleneck2d_config,
         if bottleneck:
             x = Conv2D.from_config(dict(bottleneck2d_config,
                                         **{'filters': filters}))(x)
-        conf = dict(conv2d_config, **{'filters': filters, 'strides': strides})
-        x = Conv2DTranspose.from_config(conf)(x)
-        if dropout and (dropout['t'] == 'layerwise' or
-                        dropout['t'] == 'blockwise'):
+        if dropout and dropout['t'] == 'layerwise':
+            x = deserialize_layer(dropout)(x)
+        x = Conv2DTranspose.from_config(dict(conv2d_config,
+                                             **{'filters': filters,
+                                                'strides': strides}))(x)
+        if dropout and dropout['t'] == 'blockwise':
             x = deserialize_layer(dropout)(x)
         return x, filters
     else:
@@ -240,13 +242,14 @@ def upblock2d_bn(inputs, filters, N, k, bottleneck, bn_config,
                                         **{'filters': filters}))(x)
             x = BatchNormalization.from_config(bn_config)(x)
             x = Activation(activation)(x)
+        if dropout and dropout['t'] == 'layerwise':
+            x = deserialize_layer(dropout)(x)
         x = Conv2DTranspose.from_config(dict(conv2d_config,
                                              **{'filters': filters,
                                                 'strides': strides}))(x)
         x = BatchNormalization.from_config(bn_config)(x)
         x = Activation(activation)(x)
-        if dropout and (dropout['t'] == 'layerwise' or
-                        dropout['t'] == 'blockwise'):
+        if dropout and dropout['t'] == 'blockwise':
             x = deserialize_layer(dropout)(x)
         return x, filters
     else:
