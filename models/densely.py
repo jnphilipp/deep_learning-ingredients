@@ -43,6 +43,7 @@ def build(grayscale, rows, cols, blocks, layers, outputs, optimizer, _log,
         if i != blocks - 1:
             rows = math.ceil(rows / layers['strides'][0])
             cols = math.ceil(cols / layers['strides'][1])
+    vec = x
 
     # outputs
     output_types = ['class', 'image', 'mask', 'vec']
@@ -60,7 +61,7 @@ def build(grayscale, rows, cols, blocks, layers, outputs, optimizer, _log,
             x = Conv2D.from_config(dict(layers['conv2d_config'],
                                    **{'filters': output['nb_classes'],
                                       'kernel_size': (int(rows), int(cols)),
-                                      'padding': 'valid'}))(x)
+                                      'padding': 'valid'}))(vec)
             x = Flatten()(x)
             outs.append(Activation(output['activation'],
                                    name=output['name'])(x))
@@ -71,27 +72,28 @@ def build(grayscale, rows, cols, blocks, layers, outputs, optimizer, _log,
                            'padding': 'same',
                            'activation': output['activation'],
                            'name': output['name']})
-            outs.append(Conv2D.from_config(conf)(x))
+            outs.append(Conv2D.from_config(conf)(vec))
         elif output['t'] == 'mask':
+            s = vec
             for i in reversed(range(blocks)):
                 shortcut = shortcuts[i][0]
                 filters = shortcuts[i - 1 if i >= 0 else 0][1]
                 if i is not blocks - 1:
-                    x = concatenate([x, shortcut], axis=layers['concat_axis'])
+                    s = concatenate([s, shortcut], axis=layers['concat_axis'])
                 else:
-                    x = shortcut
+                    s = shortcut
                 if i > 0:
                     conf = dict(layers['conv2d_config'],
                                 **{'filters': filters,
                                    'strides': layers['strides']})
-                    x = Conv2DTranspose.from_config(conf)(x)
+                    s = Conv2DTranspose.from_config(conf)(s)
             conf = dict(layers['conv2d_config'],
                         **{'filters': 1,
                            'activation': 'sigmoid',
                            'name': output['name']})
-            outs.append(Conv2D.from_config(conf)(x))
+            outs.append(Conv2D.from_config(conf)(s))
         elif output['t'] == 'vec':
-            outs.append(x)
+            outs.append(vec)
 
     # Model
     model = Model(inputs=inputs, outputs=outs,
