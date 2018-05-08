@@ -26,8 +26,8 @@ def build(grayscale, rows, cols, blocks, layers, outputs, optimizer, _log,
         input_shape = (rows, cols, filters)
 
     inputs = Input(shape=input_shape, name='input')
-    if 'gaussian_noise_config' in layers and layers['gaussian_noise_config']:
-        x = GaussianNoise.from_config(layers['gaussian_noise_config'])(inputs)
+    if 'noise_config' in layers and layers['noise_config']:
+        x = deserialize_layer(layers['noise_config'])(inputs)
     else:
         x = inputs
 
