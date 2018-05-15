@@ -156,9 +156,7 @@ def block2d(inputs, filters, N, k, bottleneck, bottleneck2d_config,
                                        'strides': strides}))(x)
         if dropout and dropout['t'] == 'blockwise':
             x = deserialize_layer(dropout)(x)
-        return x, filters
-    else:
-        return x, filters
+    return x, filters
 
 
 @ingredients.capture(prefix='layers')
@@ -168,9 +166,7 @@ def block2d_bn(inputs, filters, N, k, bottleneck, bn_config,
     convs = []
     for j in range(N):
         filters += k
-        convs.append(conv2d_bn(inputs if j == 0 else x, k, bottleneck,
-                               bn_config, bottleneck2d_config, conv2d_config,
-                               activation))
+        convs.append(conv2d_bn(inputs if j == 0 else x))
         x = concatenate([inputs] + convs, axis=concat_axis)
 
     if 'shortcuts' in kwargs:
@@ -192,9 +188,7 @@ def block2d_bn(inputs, filters, N, k, bottleneck, bn_config,
         x = Activation(activation)(x)
         if dropout and dropout['t'] == 'blockwise':
             x = deserialize_layer(dropout)(x)
-        return x, filters
-    else:
-        return x, filters
+    return x, filters
 
 
 @ingredients.capture(prefix='layers')
@@ -204,8 +198,7 @@ def upblock2d(inputs, filters, N, k, bottleneck, bottleneck2d_config,
     convs = []
     for j in range(N):
         filters += k
-        convs.append(conv2d(inputs if j == 0 else x, k, bottleneck,
-                            bottleneck2d_config, conv2d_config))
+        convs.append(conv2d(inputs if j == 0 else x))
         x = concatenate([inputs] + convs, axis=concat_axis)
 
     if transpose:
@@ -220,9 +213,7 @@ def upblock2d(inputs, filters, N, k, bottleneck, bottleneck2d_config,
                                                 'strides': strides}))(x)
         if dropout and dropout['t'] == 'blockwise':
             x = deserialize_layer(dropout)(x)
-        return x, filters
-    else:
-        return x, filters
+    return x, filters
 
 
 @ingredients.capture(prefix='layers')
@@ -232,9 +223,7 @@ def upblock2d_bn(inputs, filters, N, k, bottleneck, bn_config,
     convs = []
     for j in range(N):
         filters += k
-        convs.append(conv2d_bn(inputs if j == 0 else x, k, bottleneck,
-                               bn_config, bottleneck2d_config, conv2d_config,
-                               activation))
+        convs.append(conv2d_bn(inputs if j == 0 else x))
         x = concatenate([inputs] + convs, axis=concat_axis)
 
     if transpose:
@@ -253,6 +242,4 @@ def upblock2d_bn(inputs, filters, N, k, bottleneck, bn_config,
         x = Activation(activation)(x)
         if dropout and dropout['t'] == 'blockwise':
             x = deserialize_layer(dropout)(x)
-        return x, filters
-    else:
-        return x, filters
+    return x, filters

@@ -22,7 +22,7 @@ def build(vocab_size, N, layers, outputs, optimizer, _log, loss_weights=None,
     x = Embedding.from_config(dict(layers['embedding_config'],
                                    **{'input_dim': vocab_size}))(inputs)
     if layers['embedding_dropout']:
-        x = SpatialDropout1D(rate=layers['embedding_dropout'])(x)
+        x = deserialize_layer(layers['embedding_dropout'])(x)
 
     for i in range(N):
         layer = deepcopy(layers['recurrent_config'])
@@ -43,8 +43,9 @@ def build(vocab_size, N, layers, outputs, optimizer, _log, loss_weights=None,
             metrics[output['name']] = output['metrics']
 
         if output['t'] == 'class':
+            nb_classes = output['nb_classes']
             layer = deepcopy(layers[output['layer']])
-            layer['config']['units'] = output['nb_classes']
+            layer['config'][nb_classes['k']] = nb_classes['v']
             layer['config']['name'] = output['name']
             if 'activation' in output:
                 layer['config']['activation'] = output['activation']
