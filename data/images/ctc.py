@@ -31,7 +31,8 @@ def paint_text(text, height, width, fonts, font_size, font_rgb, rg):
             np.random.choice(fonts),
             np.random.choice([cairo.FONT_SLANT_NORMAL, cairo.FONT_SLANT_ITALIC,
                               cairo.FONT_SLANT_OBLIQUE]),
-            np.random.choice([cairo.FONT_WEIGHT_BOLD, cairo.FONT_WEIGHT_NORMAL])
+            np.random.choice([cairo.FONT_WEIGHT_BOLD,
+                              cairo.FONT_WEIGHT_NORMAL])
         )
         context.set_font_size(font_size)
         box = context.text_extents(text)
@@ -72,7 +73,9 @@ def paint_text(text, height, width, fonts, font_size, font_rgb, rg):
 
 
 def get_generator(backgrounds, text_generator, font_size, font_rgb):
-    def generator(N, shape, mask_shape, batch_size=128):
+    N = len(backgrounds)
+
+    def generator(shape, batch_size=128, mask_shape=None):
         if K.image_data_format() == 'channels_first':
             r = shape[1]
             c = shape[2]
@@ -83,31 +86,43 @@ def get_generator(backgrounds, text_generator, font_size, font_rgb):
         b = 0
         while True:
             current_index = (b * batch_size) % N
-            current_batch_size = batch_size if N >= current_index + batch_size \
-                else N - current_index
-            b = b + 1 if current_batch_size == batch_size else 0
+            if N >= current_index + batch_size:
+                current_batch_size = batch_size
+            else:
+                current_batch_size = N - current_index
+
+            if b == 0:
+                index_array = np.random.permutation(N)
 
             bX = np.zeros((current_batch_size,) + tuple(shape))
-            bmasks = np.zeros((current_batch_size,) + mask_shape)
-            for i in range(current_batch_size):
+            if mask_shape is not None:
+                bmasks = np.zeros((current_batch_size,) + mask_shape)
+
+            bindex_array = index_array[current_index:
+                                       current_index + current_batch_size]
+            for i, j in enumerate(bindex_array):
                 text_img = paint_text(text_generator(), r, c,
                                       font_size=font_size(),
                                       font_rgb=font_rgb())
-                bX[i] = text_img * patch(
-                    np.random.choice(backgrounds) / 255, r, c
-                )[0]
-                if K.image_data_format() == 'channels_first':
-                    bmasks[i] = np.dot(
-                        text_img[:3,...], [0.299, 0.587, 0.114]
-                    ).reshape(mask_shape)
-                elif K.image_data_format() == 'channels_last':
-                    bmasks[i] = np.dot(
-                        text_img[...,:3], [0.299, 0.587, 0.114]
-                    ).reshape(mask_shape)
+                bX[i] = text_img * patch(backgrounds[j], r, c)[0]
 
-            bmasks[bmasks < .9] = 0.
-            bmasks[bmasks >= .9] = 1.
-            bmasks = 1 - bmasks
-            yield bX, bmasks
+                if mask_shape is not None:
+                    if K.image_data_format() == 'channels_first':
+                        bmasks[i] = np.dot(
+                            text_img[:3, ...], [0.299, 0.587, 0.114]
+                        ).reshape(mask_shape)
+                    elif K.image_data_format() == 'channels_last':
+                        bmasks[i] = np.dot(
+                            text_img[..., :3], [0.299, 0.587, 0.114]
+                        ).reshape(mask_shape)
+
+            if mask_shape is not None:
+                bmasks[bmasks < .9] = 0.
+                bmasks[bmasks >= .9] = 1.
+                bmasks = 1 - bmasks
+                yield bX, bmasks
+            else:
+                yield bX
+            b = b + 1 if current_batch_size == batch_size else 0
 
     return generator
