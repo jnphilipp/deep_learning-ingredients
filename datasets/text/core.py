@@ -2,12 +2,12 @@
 
 import os
 
-from ingredients.data import ingredients
+from ingredients.datasets import ingredients
 
 
 @ingredients.capture
-def lines(DATASETS_DIR, dataset, which_set, filters=None, clean=None):
-    print('Loading lines [dataset=%s - which_set=%s]' % (dataset, which_set))
+def lines(DATASETS_DIR, dataset, which_set, _log, filters=None, clean=None):
+    _log.info('Loading lines [%s: %s]' % (dataset, which_set))
     lines = []
     for file in os.listdir(os.path.join(DATASETS_DIR, dataset, which_set)):
         with open(os.path.join(DATASETS_DIR, dataset, which_set, file), 'r',

@@ -2,13 +2,13 @@
 
 import numpy as np
 
-from ingredients.data import ingredients
+from ingredients.datasets import ingredients
 
 
 @ingredients.capture
-def split(X, y, validation_split, *args, **kwargs):
-    print('Making validation split [samples=%s - validation_split=%s]...' %
-          (len(X), validation_split))
+def split(X, y, validation_split, _log, *args, **kwargs):
+    _log.info('Making validation split [samples=%s: validation split=%s].' %
+              (len(X), validation_split))
 
     X_train = []
     y_train = []
@@ -67,5 +67,6 @@ def split(X, y, validation_split, *args, **kwargs):
         train.append(splits['%s_train' % k])
         val.append(splits['%s_val' % k])
 
-    print('Train on %d samples, validate on %d samples.' % (len(X_train), len(X_val)))
+    _log.info('Train on %d samples, validate on %d samples.' %
+              (len(X_train), len(X_val)))
     return train + val

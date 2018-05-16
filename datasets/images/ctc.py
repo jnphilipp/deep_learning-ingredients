@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import cairocffi as cairo
-import math
 import numpy as np
 
-from ingredients.data import ingredients
+from ingredients.datasets import ingredients
 from keras import backend as K
 from keras.preprocessing.image import random_rotation
 
@@ -105,7 +104,6 @@ def get_generator(backgrounds, text_generator, font_size, font_rgb):
                                       font_size=font_size(),
                                       font_rgb=font_rgb())
                 bX[i] = text_img * patch(backgrounds[j], r, c)[0]
-
                 if mask_shape is not None:
                     if K.image_data_format() == 'channels_first':
                         bmasks[i] = np.dot(
@@ -124,5 +122,4 @@ def get_generator(backgrounds, text_generator, font_size, font_rgb):
             else:
                 yield bX
             b = b + 1 if current_batch_size == batch_size else 0
-
     return generator

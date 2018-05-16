@@ -4,12 +4,12 @@ import h5py
 import numpy as np
 import os
 
-from ingredients.data import ingredients
+from ingredients.datasets import ingredients
 
 
 @ingredients.capture
-def load(DATASETS_DIR, dataset, which_set, names=[]):
-    print('Loading h5py [dataset=%s - which_set=%s]...' % (dataset, which_set))
+def load(DATASETS_DIR, dataset, which_set, _log, names=[]):
+    _log.info('Loading h5py [%s: %s].' % (dataset, which_set))
 
     with h5py.File(os.path.join(DATASETS_DIR, dataset, which_set), 'r') as f:
         if names:

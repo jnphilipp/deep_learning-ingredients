@@ -2,14 +2,19 @@
 
 import numpy as np
 
-from ingredients.data import ingredients
+from ingredients.datasets import ingredients
 from keras import backend as K
 
 
 @ingredients.capture
 def patch(x, height, width, *args, **kwargs):
-    r = x.shape[1 if K.image_data_format() == 'channels_first' else 0]
-    c = x.shape[2 if K.image_data_format() == 'channels_first' else 1]
+    if K.image_data_format() == 'channels_first':
+        r = x.shape[1]
+        c = x.shape[2]
+    elif K.image_data_format() == 'channels_last':
+        r = x.shape[0]
+        c = x.shape[1]
+
     top_left_x = np.random.randint(0, r - height) if r > height else 0
     top_left_y = np.random.randint(0, c - width) if c > width else 0
 

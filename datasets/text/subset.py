@@ -4,15 +4,15 @@ import math
 import os
 import sys
 
-from ingredients.data import ingredients
+from ingredients.datasets import ingredients
 
 
 @ingredients.capture
-def generate(DATASETS_DIR, dataset, new_set, max_vocab_size, filters=None,
-             clean=None):
-    sentences = lines()
-    print('Generating subset [dataset=%s - which_set=%s]' % (dataset, new_set))
+def generate(DATASETS_DIR, dataset, new_set, max_vocab_size, _log,
+             filters=None, clean=None):
+    _log.info('Generating subset [%s: %s]' % (dataset, new_set))
 
+    sentences = lines()
     search_list = []
     for i in range(len(sentences)):
         sentence = sentences[i].strip()

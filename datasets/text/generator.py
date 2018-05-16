@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from ingredients.data import ingredients
+from ingredients.datasets import ingredients
 
 
 @ingredients.config

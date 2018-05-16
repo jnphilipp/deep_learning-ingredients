@@ -5,11 +5,10 @@ import numpy as np
 import os
 import re
 
-from ingredients.data import ingredients
+from ingredients.datasets import ingredients
 from keras import backend as K
 from keras.preprocessing import image
 from keras.utils import np_utils
-from scipy import ndimage
 
 
 @ingredients.config
@@ -52,7 +51,7 @@ def from_directory(DATASETS_DIR, dataset, which_set, masks, load_images, _log):
                     continue
                 X[-1][mask] = load_img(pm) if load_images else pm
 
-    _log.info('Loading images [%s: %s]' % (dataset, which_set))
+    _log.info('Loading images [%s: %s].' % (dataset, which_set))
     dataset_path = os.path.join(DATASETS_DIR, dataset, which_set)
     nb_classes = 0
     X = []
@@ -69,17 +68,18 @@ def from_directory(DATASETS_DIR, dataset, which_set, masks, load_images, _log):
         X = np.asarray([x['x'] for x in X])
 
     if nb_classes == 0:
+        _log.info('Loaded %d images.' % len(X))
         return (X,)
     else:
+        _log.info('Loaded %d images (%d classes).' % (len(X), nb_classes))
         y = np_utils.to_categorical(np.asarray(y), nb_classes)
         return X, y, nb_classes
 
 
 @ingredients.capture
 def load(DATASETS_DIR, dataset, which_set, ext, grayscale, masks, load_images,
-         X_fields=[], y_fields=[], **kwargs):
-    print('Loading images [dataset=%s - which_set=%s]...' % (dataset,
-                                                             which_set))
+         _log, X_fields=[], y_fields=[], **kwargs):
+    _log.info('Loading images [%s: %s].' % (dataset, which_set))
 
     dataset_path = os.path.join(DATASETS_DIR, dataset, which_set)
     if dataset_path.endswith('.csv'):
@@ -93,7 +93,7 @@ def load(DATASETS_DIR, dataset, which_set, ext, grayscale, masks, load_images,
 
             if has_header:
                 fields = reader.fieldnames
-                print(fields)
+                _log.info(fields)
 
             nb_classes = {}
             X = []
@@ -181,16 +181,3 @@ def load(DATASETS_DIR, dataset, which_set, ext, grayscale, masks, load_images,
             return X, Xmasks, names
         else:
             return X, names
-
-
-@ingredients.capture
-def speckle(img):
-    """This creates larger "blotches" of noise which look more realistic than
-    just adding gaussian noise assumes greyscale with pixels ranging from 0 to 1
-    """
-    severity = np.random.uniform(0, 0.6)
-    blur = ndimage.gaussian_filter(np.random.randn(*img.shape) * severity, 1)
-    img_speck = (img + blur)
-    img_speck[img_speck > 1] = 1
-    img_speck[img_speck <= 0] = 0
-    return img_speck

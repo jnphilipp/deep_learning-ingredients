@@ -3,7 +3,7 @@
 import os
 
 from sacred import Ingredient
-ingredients = Ingredient('data')
+ingredients = Ingredient('datasets')
 
 
 from ingredients import PROJECT_DIR

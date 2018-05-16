@@ -4,12 +4,14 @@ import json
 import numpy as np
 import os
 
-from ingredients.data import ingredients
+from ingredients.datasets import ingredients
 from keras.utils import np_utils
 
 
 @ingredients.capture
-def load(DATASETS_DIR, dataset, which_set, vocab, fclean=None):
+def load(DATASETS_DIR, dataset, which_set, vocab, _log, fclean=None):
+    _log.info('Loading json [%s: %s].' % (dataset, which_set))
+
     trans = str.maketrans(dict((s, str(i)) for i, s in enumerate(vocab)))
 
     data = {}
@@ -89,4 +91,5 @@ def load(DATASETS_DIR, dataset, which_set, vocab, fclean=None):
 
     outputs['entities'] = entities
     outputs['outputs'] = list(y.keys())
+    _log.info('Loaded %d samples.' % len(X))
     return X, y, len(vocab), outputs
