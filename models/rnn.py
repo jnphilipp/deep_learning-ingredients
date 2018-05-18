@@ -2,8 +2,8 @@
 
 from copy import deepcopy
 from keras import backend as K
-from keras.layers import (deserialize as deserialize_layer, Dense, Embedding,
-                          Input, SpatialDropout1D)
+from keras.layers import *
+from keras.layers import deserialize as deserialize_layer
 from keras.models import Model
 from keras.optimizers import deserialize as deserialize_optimizers
 from ingredients.models import ingredients
@@ -28,7 +28,13 @@ def build(vocab_size, N, layers, outputs, optimizer, _log, loss_weights=None,
         layer = deepcopy(layers['recurrent_config'])
         if i != N - 1:
             layer['config']['return_sequences'] = True
-        x = deserialize_layer(layer)(x)
+
+        if 'bidirectional_config' in layers and layers['bidirectional_config']:
+            conf = dict(layers['bidirectional_config'],
+                        **{'layer': layer})
+            x = Bidirectional.from_config(conf)(x)
+        else:
+            x = deserialize_layer(layer)(x)
 
     # outputs
     output_types = ['class', 'vec']
