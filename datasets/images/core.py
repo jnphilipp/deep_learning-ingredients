@@ -36,7 +36,8 @@ def load_img(path, grayscale):
 
 
 @ingredients.capture
-def from_directory(DATASETS_DIR, dataset, which_set, masks, load_images, _log):
+def from_directory(DATASETS_DIR, dataset, which_set, masks, load_images, _log,
+                   rescale=None):
     def load_dir(path):
         for p in list_pictures(path):
             name, ext = os.path.splitext(os.path.basename(p))
@@ -50,6 +51,9 @@ def from_directory(DATASETS_DIR, dataset, which_set, masks, load_images, _log):
                 if not os.path.exists(pm):
                     continue
                 X[-1][mask] = load_img(pm) if load_images else pm
+            if rescale:
+                for k in X[-1].keys():
+                    X[-1][k] *= rescale
 
     _log.info('Loading images [%s: %s].' % (dataset, which_set))
     dataset_path = os.path.join(DATASETS_DIR, dataset, which_set)
