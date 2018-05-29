@@ -6,6 +6,7 @@ import sys
 from keras import backend as K
 from keras.models import load_model
 from keras.utils import plot_model
+from keras.utils.layer_utils import count_params
 from ingredients.models import (autoencoder, cnn, dense, densely, ingredients,
                                 rnn, seq2seq, siamese)
 
@@ -16,7 +17,7 @@ def config():
 
 
 @ingredients.capture
-def get(path, net_type, *args, **kwargs):
+def get(path, net_type, _log, *args, **kwargs):
     net_types = ['autoencoder', 'cnn', 'dense', 'densely', 'rnn', 'seq2seq',
                  'siamese']
     assert net_type in net_types
@@ -38,6 +39,19 @@ def get(path, net_type, *args, **kwargs):
             model = siamese.build(*args, **kwargs)
     else:
         model = load()
+
+    model._check_trainable_weights_consistency()
+    if hasattr(model, '_collected_trainable_weights'):
+        trainable_count = count_params(model._collected_trainable_weights)
+    else:
+        trainable_count = count_params(model.trainable_weights)
+    non_trainable_count = count_params(model.non_trainable_weights)
+
+    _log.info('Total params: {:,}'.format(trainable_count +
+                                          non_trainable_count))
+    _log.info('Trainable params: {:,}'.format(trainable_count))
+    _log.info('Non-trainable params: {:,}'.format(non_trainable_count))
+
     return model
 
 
