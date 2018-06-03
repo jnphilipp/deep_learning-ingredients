@@ -44,40 +44,42 @@ def from_directory(DATASETS_DIR, dataset, which_set, masks, load_images, _log,
             if re.match(r'.*\.(' + '|'.join(masks) + ')', name):
                 continue
 
-            X.append({'x': load_img(p) if load_images else p})
-            y.append(nb_classes)
+            imgs.append({
+                'img': load_img(p) if load_images else p,
+                'y': nb_classes
+            })
             for mask in masks:
                 pm = os.path.join(path, '%s.%s%s' % (name, mask, ext))
                 if not os.path.exists(pm):
                     continue
-                X[-1][mask] = load_img(pm) if load_images else pm
+                imgs[-1][mask] = load_img(pm, True) if load_images else pm
             if rescale:
-                for k in X[-1].keys():
-                    X[-1][k] *= rescale
+                for k in imgs[-1].keys():
+                    if k == 'y':
+                        continue
+                    imgs[-1][k] *= rescale
 
     _log.info('Loading images [%s: %s].' % (dataset, which_set))
     dataset_path = os.path.join(DATASETS_DIR, dataset, which_set)
     nb_classes = 0
-    X = []
-    y = []
+    imgs = []
     for e in sorted(os.scandir(dataset_path), key=lambda e: e.name):
         if e.is_dir():
             load_dir(e.path)
             nb_classes += 1
-    if len(X) == 0:
+    if len(imgs) == 0:
         load_dir(dataset_path)
 
-    if max(len(x) for x in X) == 1 and \
-            len(set([x['x'].shape for x in X])) <= 1:
-        X = np.asarray([x['x'] for x in X])
+    if max(len(i) for i in imgs) == 1 and \
+            len(set([i['img'].shape for i in imgs])) <= 1:
+        imgs = np.asarray([i['img'] for i in imgs])
 
     if nb_classes == 0:
-        _log.info('Loaded %d images.' % len(X))
-        return (X,)
+        _log.info('Loaded %d images.' % len(imgs))
+        return (imgs,)
     else:
-        _log.info('Loaded %d images (%d classes).' % (len(X), nb_classes))
-        y = np_utils.to_categorical(np.asarray(y), nb_classes)
-        return X, y, nb_classes
+        _log.info('Loaded %d images (%d classes).' % (len(imgs), nb_classes))
+        return imgs, nb_classes
 
 
 @ingredients.capture
