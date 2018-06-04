@@ -152,6 +152,8 @@ def image(model, image_path, batch_size, overlap, data_format=None):
                 bX[j] = inputs['img'][top:bottom, left:right, :]
 
         p = model.predict_on_batch(bX)
+        if type(p) != list:
+            p = [p]
         for j in range(current_batch_size):
             for i in range(len(outputs)):
                 idx_r = map_r(b, j, batch_size, inputs['nb_r'])
