@@ -32,18 +32,18 @@ def image(model, image_path, batch_size, overlap, data_format=None):
     if data_format not in {'channels_first', 'channels_last'}:
         raise ValueError('Unknown data_format:', data_format)
 
-    inputs = model.inputs
-    if len(inputs) != 1:
+    if len(model.inputs) != 1:
         raise RuntimeError('Models with more than one input are not'
                            ' supported at the moment.')
 
-    for i in range(len(inputs)):
-        name = inputs[i].name
+    inputs = []
+    for i in range(len(model.inputs)):
+        name = model.inputs[i].name
         pos = min(name.index('/') if '/' in name else len(name),
                   name.index(':') if ':' in name else len(name))
         name = name[:pos]
 
-        inputs[i] = {'shape': inputs[i].shape.as_list(), 'name': name}
+        inputs.append({'shape': model.inputs[i].shape.as_list(), 'name': name})
         if data_format == 'channels_first':
             inputs[i]['grayscale'] = inputs[i]['shape'][1] == 1
             inputs[i]['r'] = inputs[i]['shape'][2]
