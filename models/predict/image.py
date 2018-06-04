@@ -2,11 +2,13 @@
 
 import math
 import numpy as np
+import os
 
 from ingredients.datasets.images import load_img
 from ingredients.models import ingredients
 from keras import backend as K
 from keras.callbacks import BaseLogger, CallbackList, History, ProgbarLogger
+from keras.preprocessing.image import array_to_img
 
 from utils import current_time_millis
 
@@ -221,3 +223,54 @@ def image(model, image_path, batch_size, overlap, data_format=None):
         del outputs[i]['p']
         del outputs[i]['shape']
     return history.history, outputs
+
+
+@ingredients.capture
+def outputs_to_img(outputs, img, base_path, data_format=None):
+    if data_format is None:
+        data_format = K.image_data_format()
+    if data_format not in {'channels_first', 'channels_last'}:
+        raise ValueError('Unknown data_format:', data_format)
+
+    name, ext = os.path.splitext(os.path.basename(img))
+    img = load_img(img, False)
+    for i in range(len(outputs)):
+        if outputs[i]['t'] == 'class':
+            if data_format == 'channels_first':
+                for j in range(outputs[i]['img'].shape[0]):
+                    shape = outputs[i]['img'][j, :, :].shape
+                    p = np.zeros((3,) + shape)
+                    p[0, :, :] = outputs[i]['img'][j, :, :]
+                    p[1, :, :] = outputs[i]['img'][j, :, :]
+                    p[2, :, :] = outputs[i]['img'][j, :, :]
+                    p[p < .5] = 0.
+                    p *= img
+
+                    o = outputs[i]['img'][j, :, :].reshape((1,) + shape)
+                    path = os.path.join(base_path, '%s-%s:%s%s' %
+                                        (name, outputs[i]['name'], j, ext))
+                    array_to_img(o).save(path)
+                    path = os.path.join(base_path, '%s-%s:%s-map%s' %
+                                        (name, outputs[i]['name'], j, ext))
+                    array_to_img(p).save(path)
+            elif data_format == 'channels_last':
+                for j in range(outputs[i]['img'].shape[2]):
+                    shape = outputs[i]['img'][:, :, j].shape
+                    p = np.zeros(shape + (3,))
+                    p[:, :, 0] = outputs[i]['img'][:, :, j]
+                    p[:, :, 1] = outputs[i]['img'][:, :, j]
+                    p[:, :, 2] = outputs[i]['img'][:, :, j]
+                    p[p < .5] = 0.
+                    p *= img
+
+                    o = outputs[i]['img'][:, :, j].reshape(shape + (1,))
+                    path = os.path.join(base_path, '%s-%s:%s%s' %
+                                        (name, outputs[i]['name'], j, ext))
+                    array_to_img(o).save(path)
+                    path = os.path.join(base_path, '%s-%s:%s-map%s' %
+                                        (name, outputs[i]['name'], j, ext))
+                    array_to_img(p).save(path)
+        elif outputs[i]['t'] == 'img':
+            path = os.path.join(base_path, '%s-%s%s' %
+                                (name, outputs[i]['name'], ext))
+            array_to_img(outputs[i]['img']).save(path)
