@@ -42,3 +42,15 @@ def shape(DATASETS_DIR, dataset, which_set, name):
     with h5py.File(os.path.join(DATASETS_DIR, dataset, which_set), 'r') as f:
         ds = f[name]
         return ds.shape
+
+
+@ingredients.capture
+def save(path, name, matrices):
+    assert type(matrices) == dict
+
+    with h5py.File(path, 'w') as f:
+        f.attrs['name'] = name
+        for k, v in matrices.items():
+            param_dset = f.create_dataset(k, v.shape, dtype=v.dtype)
+            param_dset[:] = v
+            f.flush()

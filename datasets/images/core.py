@@ -17,6 +17,7 @@ def config():
     grayscale = False
     masks = []
     load_images = True
+    rescale = 1./255
 
     X_fields = []
     y_fields = []
@@ -31,13 +32,15 @@ def list_pictures(directory, ext):
 
 
 @ingredients.capture
-def load_img(path, grayscale):
-    return image.img_to_array(image.load_img(path, grayscale))
+def load_img(path, grayscale, rescale):
+    img = image.img_to_array(image.load_img(path, grayscale))
+    if rescale:
+        img *= rescale
+    return img
 
 
 @ingredients.capture
-def from_directory(DATASETS_DIR, dataset, which_set, masks, load_images, _log,
-                   rescale=None):
+def from_directory(DATASETS_DIR, dataset, which_set, masks, load_images, _log):
     def load_dir(path):
         for p in list_pictures(path):
             name, ext = os.path.splitext(os.path.basename(p))
@@ -53,11 +56,6 @@ def from_directory(DATASETS_DIR, dataset, which_set, masks, load_images, _log,
                 if not os.path.exists(pm):
                     continue
                 imgs[-1][mask] = load_img(pm, True) if load_images else pm
-            if rescale:
-                for k in imgs[-1].keys():
-                    if k == 'y':
-                        continue
-                    imgs[-1][k] *= rescale
 
     _log.info('Loading images [%s: %s].' % (dataset, which_set))
     dataset_path = os.path.join(DATASETS_DIR, dataset, which_set)
