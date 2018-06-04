@@ -9,6 +9,7 @@ from . import cnn
 from . import dense
 from . import densely
 # from . import gan
+from . import predict
 from . import rnn
 from . import seq2seq
 from . import siamese
