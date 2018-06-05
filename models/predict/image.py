@@ -257,13 +257,14 @@ def outputs_to_img(outputs, img, base_path, data_format=None):
                                         (name, outputs[i]['name'], j, ext))
                     array_to_img(p).save(path)
             elif data_format == 'channels_last':
+                img_max = outputs[i]['img'].argmax(axis=2)
                 for j in range(outputs[i]['img'].shape[2]):
                     shape = outputs[i]['img'][:, :, j].shape
                     p = np.zeros(shape + (3,))
                     p[:, :, 0] = outputs[i]['img'][:, :, j]
                     p[:, :, 1] = outputs[i]['img'][:, :, j]
                     p[:, :, 2] = outputs[i]['img'][:, :, j]
-                    p[p < .5] = 0.
+                    p *= np.where(img_max == j, img_max, 0)
                     p *= img
 
                     o = outputs[i]['img'][:, :, j].reshape(shape + (1,))
