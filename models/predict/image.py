@@ -239,13 +239,14 @@ def outputs_to_img(outputs, img, base_path, data_format=None):
     for i in range(len(outputs)):
         if outputs[i]['t'] == 'class':
             if data_format == 'channels_first':
+                img_max = outputs[i]['img'].argmax(axis=0)
                 for j in range(outputs[i]['img'].shape[0]):
                     shape = outputs[i]['img'][j, :, :].shape
                     p = np.zeros((3,) + shape)
                     p[0, :, :] = outputs[i]['img'][j, :, :]
                     p[1, :, :] = outputs[i]['img'][j, :, :]
                     p[2, :, :] = outputs[i]['img'][j, :, :]
-                    p[p < .5] = 0.
+                    p *= np.where(img_max == j, img_max, 0)
                     p *= img
 
                     o = outputs[i]['img'][j, :, :].reshape((1,) + shape)
