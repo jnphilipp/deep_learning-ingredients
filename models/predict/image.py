@@ -249,7 +249,7 @@ def outputs_to_img(outputs, img, base_path, data_format=None):
                     p[2, :, :] = out
                     p *= img
 
-                    o = outputs[i]['img'][j, :, :].reshape((1,) + shape)
+                    o = outputs[i]['img'][j, :, :].reshape((1,) + out.shape)
                     path = os.path.join(base_path, '%s-%s:%s%s' %
                                         (name, outputs[i]['name'], j, ext))
                     array_to_img(o).save(path)
@@ -267,7 +267,7 @@ def outputs_to_img(outputs, img, base_path, data_format=None):
                     p[:, :, 2] = out
                     p *= img
 
-                    o = outputs[i]['img'][:, :, j].reshape(shape + (1,))
+                    o = outputs[i]['img'][:, :, j].reshape(out.shape + (1,))
                     path = os.path.join(base_path, '%s-%s:%s%s' %
                                         (name, outputs[i]['name'], j, ext))
                     array_to_img(o).save(path)
