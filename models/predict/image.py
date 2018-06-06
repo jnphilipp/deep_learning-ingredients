@@ -241,7 +241,7 @@ def outputs_to_img(outputs, img, base_path, data_format=None):
             if data_format == 'channels_first':
                 img_max = outputs[i]['img'].argmax(axis=0)
                 for j in range(outputs[i]['img'].shape[0]):
-                    out = outputs[i]['img'][:, :, j] * np.where(img_max == j,
+                    out = outputs[i]['img'][j, :, :] * np.where(img_max == j,
                                                                 img_max, 0)
                     p = np.zeros((3,) + out.shape)
                     p[0, :, :] = out

@@ -49,6 +49,7 @@ def from_directory(DATASETS_DIR, dataset, which_set, masks, load_images, _log):
 
             imgs.append({
                 'img': load_img(p) if load_images else p,
+                'name': name,
                 'y': nb_classes
             })
             for mask in masks:
