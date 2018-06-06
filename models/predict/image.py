@@ -88,7 +88,11 @@ def image(model, image_path, batch_size, overlap, data_format=None):
         outputs.append({'name': name, 'shape': tshape})
 
         if len(tshape) == 2:
-            outputs[i]['t'] = 'class'
+            if 'softmax' in model.outputs[i].name.lower():
+                outputs[i]['t'] = 'class'
+            else:
+                outputs[i]['t'] = 'multi'
+
             nb_classes = tshape[1]
             if nb_classes is None:
                 nb_classes = model.get_layer(name).output_shape[1]
@@ -237,12 +241,17 @@ def outputs_to_img(outputs, img, base_path, data_format=None):
     name, ext = os.path.splitext(os.path.basename(img))
     img = load_img(img, False)
     for i in range(len(outputs)):
-        if outputs[i]['t'] == 'class':
+        if outputs[i]['t'] == 'class' or outputs[i]['t'] == 'multi':
             if data_format == 'channels_first':
                 img_max = outputs[i]['img'].argmax(axis=0)
                 for j in range(outputs[i]['img'].shape[0]):
-                    out = outputs[i]['img'][j, :, :] * np.where(img_max == j,
-                                                                img_max, 0)
+                    if outputs[i]['t'] == 'class':
+                        out = outputs[i]['img'][j, :, :] * \
+                            np.where(img_max == j, img_max, 0)
+                    elif outputs[i]['t'] == 'multi':
+                        out = outputs[i]['img'][j, :, :]
+                        out[out < .5] = 0.
+
                     p = np.zeros((3,) + out.shape)
                     p[0, :, :] = out
                     p[1, :, :] = out
@@ -259,8 +268,13 @@ def outputs_to_img(outputs, img, base_path, data_format=None):
             elif data_format == 'channels_last':
                 img_max = outputs[i]['img'].argmax(axis=2)
                 for j in range(outputs[i]['img'].shape[2]):
-                    out = outputs[i]['img'][:, :, j] * np.where(img_max == j,
-                                                                img_max, 0)
+                    if outputs[i]['t'] == 'class':
+                        out = outputs[i]['img'][:, :, j] * \
+                            np.where(img_max == j, img_max, 0)
+                    elif outputs[i]['t'] == 'multi':
+                        out = outputs[i]['img'][:, :, j]
+                        out[out < .5] = 0.
+
                     p = np.zeros(out.shape + (3,))
                     p[:, :, 0] = out
                     p[:, :, 1] = out
