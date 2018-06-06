@@ -241,12 +241,12 @@ def outputs_to_img(outputs, img, base_path, data_format=None):
             if data_format == 'channels_first':
                 img_max = outputs[i]['img'].argmax(axis=0)
                 for j in range(outputs[i]['img'].shape[0]):
-                    shape = outputs[i]['img'][j, :, :].shape
-                    p = np.zeros((3,) + shape)
-                    p[0, :, :] = outputs[i]['img'][j, :, :]
-                    p[1, :, :] = outputs[i]['img'][j, :, :]
-                    p[2, :, :] = outputs[i]['img'][j, :, :]
-                    p *= np.where(img_max == j, img_max, 0)
+                    out = outputs[i]['img'][:, :, j] * np.where(img_max == j,
+                                                                img_max, 0)
+                    p = np.zeros((3,) + out.shape)
+                    p[0, :, :] = out
+                    p[1, :, :] = out
+                    p[2, :, :] = out
                     p *= img
 
                     o = outputs[i]['img'][j, :, :].reshape((1,) + shape)
@@ -259,12 +259,12 @@ def outputs_to_img(outputs, img, base_path, data_format=None):
             elif data_format == 'channels_last':
                 img_max = outputs[i]['img'].argmax(axis=2)
                 for j in range(outputs[i]['img'].shape[2]):
-                    shape = outputs[i]['img'][:, :, j].shape
-                    p = np.zeros(shape + (3,))
-                    p[:, :, 0] = outputs[i]['img'][:, :, j]
-                    p[:, :, 1] = outputs[i]['img'][:, :, j]
-                    p[:, :, 2] = outputs[i]['img'][:, :, j]
-                    p *= np.where(img_max == j, img_max, 0)
+                    out = outputs[i]['img'][:, :, j] * np.where(img_max == j,
+                                                                img_max, 0)
+                    p = np.zeros(out.shape + (3,))
+                    p[:, :, 0] = out
+                    p[:, :, 1] = out
+                    p[:, :, 2] = out
                     p *= img
 
                     o = outputs[i]['img'][:, :, j].reshape(shape + (1,))
