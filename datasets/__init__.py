@@ -11,6 +11,7 @@ from .core import *
 from . import h5py
 from . import images
 from . import json
+from . import keras
 from . import text
 
 
