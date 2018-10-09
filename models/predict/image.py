@@ -4,13 +4,12 @@ import math
 import numpy as np
 import os
 
+from decorators import runtime
 from ingredients.datasets.images import load_img
 from ingredients.models import ingredients
 from keras import backend as K
 from keras.callbacks import BaseLogger, CallbackList, History, ProgbarLogger
 from keras.preprocessing.image import array_to_img
-
-from utils import current_time_millis
 
 
 @ingredients.config
@@ -74,8 +73,6 @@ def image(model, image_path, batch_size, overlap, data_format=None):
         inputs[i]['nb_c'] = math.ceil(inputs[i]['diff_c'] /
                                       inputs[i]['offset_c']) + 1
     inputs = inputs[0]
-    N = inputs['nb_r'] * inputs['nb_c']
-    steps = math.ceil(N / batch_size)
 
     metrics = []
     outputs = []
@@ -109,73 +106,9 @@ def image(model, image_path, batch_size, overlap, data_format=None):
             shape = (inputs['nb_r'], inputs['nb_c']) + tuple(tshape[1:])
         outputs[i]['p'] = np.zeros(shape)
 
-    history = History()
-    callbacks = CallbackList([BaseLogger(), history, ProgbarLogger()])
-    callbacks.set_model(model)
-    callbacks.set_params({
-        'batch_size': batch_size,
-        'epochs': 1,
-        'steps': steps,
-        'samples': N,
-        'verbose': 1,
-        'do_validation': False,
-        'metrics': metrics,
-    })
-
-    callbacks.on_train_begin()
-    callbacks.on_epoch_begin(0)
-    start_time = current_time_millis()
-    for b in range(steps):
-        current_index = (b * batch_size) % N
-        if N >= current_index + batch_size:
-            current_batch_size = batch_size
-        else:
-            current_batch_size = N - current_index
-
-        batch_logs = {'batch': b, 'size': current_batch_size}
-        for metric in metrics:
-            batch_logs[metric] = 0
-        callbacks.on_batch_begin(b, batch_logs)
-
-        bX = np.zeros((current_batch_size,) + tuple(inputs['shape'][1:]))
-        for j in range(current_batch_size):
-            idx_r = map_r(b, j, batch_size, inputs['nb_r'])
-            idx_c = map_c(b, j, batch_size, inputs['nb_r'])
-            top = min(idx_r * inputs['offset_r'],
-                      inputs['img_r'] - inputs['r'])
-            bottom = min(idx_r * inputs['offset_r'] + inputs['r'],
-                         inputs['img_r'])
-            left = min(idx_c * inputs['offset_c'],
-                       inputs['img_c'] - inputs['c'])
-            right = min(idx_c * inputs['offset_c'] + inputs['c'],
-                        inputs['img_c'])
-
-            if data_format == 'channels_first':
-                bX[j] = inputs['img'][:, top:bottom, left:right]
-            elif data_format == 'channels_last':
-                bX[j] = inputs['img'][top:bottom, left:right, :]
-
-        p = model.predict_on_batch(bX)
-        if type(p) != list:
-            p = [p]
-        for j in range(current_batch_size):
-            for i in range(len(outputs)):
-                idx_r = map_r(b, j, batch_size, inputs['nb_r'])
-                idx_c = map_c(b, j, batch_size, inputs['nb_r'])
-
-                if len(outputs[i]['p'].shape) == 3:
-                    if data_format == 'channels_first':
-                        outputs[i]['p'][:, idx_r, idx_c] = p[i][j]
-                    elif data_format == 'channels_last':
-                        outputs[i]['p'][idx_r, idx_c, :] = p[i][j]
-                    metric = metrics[p[i][j].argmax()]
-                    batch_logs[metric] += 1. / current_batch_size
-                elif len(outputs[i]['p'].shape) == 5:
-                    outputs[i]['p'][idx_r, idx_c, :, :, :] = p[i][j]
-        callbacks.on_batch_end(b, batch_logs)
-    runtime = (current_time_millis() - start_time) / 1000
-    callbacks.on_epoch_end(0, {'runtime': runtime})
-    callbacks.on_train_end()
+    history, runtime = _predict_loop(model, inputs=inputs, outputs=outputs,
+                                     metrics=metrics, data_format=data_format)
+    history['runtime'] = runtime
 
     for i in range(len(outputs)):
         if len(outputs[i]['shape']) == 2:
@@ -228,7 +161,81 @@ def image(model, image_path, batch_size, overlap, data_format=None):
         outputs[i]['img'] /= count
         del outputs[i]['p']
         del outputs[i]['shape']
-    return history.history, outputs
+    return history, outputs
+
+
+@ingredients.capture
+@runtime
+def _predict_loop(model, batch_size, inputs, outputs, metrics, data_format):
+    N = inputs['nb_r'] * inputs['nb_c']
+    steps = math.ceil(N / batch_size)
+
+    history = History()
+    callbacks = CallbackList([BaseLogger(), history, ProgbarLogger()])
+    callbacks.set_model(model)
+    callbacks.set_params({
+        'batch_size': batch_size,
+        'epochs': 1,
+        'steps': steps,
+        'samples': N,
+        'verbose': 1,
+        'do_validation': False,
+        'metrics': metrics,
+    })
+
+    callbacks.on_train_begin()
+    callbacks.on_epoch_begin(0)
+    for b in range(steps):
+        current_index = (b * batch_size) % N
+        if N >= current_index + batch_size:
+            current_batch_size = batch_size
+        else:
+            current_batch_size = N - current_index
+
+        batch_logs = {'batch': b, 'size': current_batch_size}
+        for metric in metrics:
+            batch_logs[metric] = 0
+        callbacks.on_batch_begin(b, batch_logs)
+
+        bX = np.zeros((current_batch_size,) + tuple(inputs['shape'][1:]))
+        for j in range(current_batch_size):
+            idx_r = map_r(b, j, batch_size, inputs['nb_r'])
+            idx_c = map_c(b, j, batch_size, inputs['nb_r'])
+            top = min(idx_r * inputs['offset_r'],
+                      inputs['img_r'] - inputs['r'])
+            bottom = min(idx_r * inputs['offset_r'] + inputs['r'],
+                         inputs['img_r'])
+            left = min(idx_c * inputs['offset_c'],
+                       inputs['img_c'] - inputs['c'])
+            right = min(idx_c * inputs['offset_c'] + inputs['c'],
+                        inputs['img_c'])
+
+            if data_format == 'channels_first':
+                bX[j] = inputs['img'][:, top:bottom, left:right]
+            elif data_format == 'channels_last':
+                bX[j] = inputs['img'][top:bottom, left:right, :]
+
+        p = model.predict_on_batch(bX)
+        if type(p) != list:
+            p = [p]
+        for j in range(current_batch_size):
+            for i in range(len(outputs)):
+                idx_r = map_r(b, j, batch_size, inputs['nb_r'])
+                idx_c = map_c(b, j, batch_size, inputs['nb_r'])
+
+                if len(outputs[i]['p'].shape) == 3:
+                    if data_format == 'channels_first':
+                        outputs[i]['p'][:, idx_r, idx_c] = p[i][j]
+                    elif data_format == 'channels_last':
+                        outputs[i]['p'][idx_r, idx_c, :] = p[i][j]
+                    metric = metrics[p[i][j].argmax()]
+                    batch_logs[metric] += 1. / current_batch_size
+                elif len(outputs[i]['p'].shape) == 5:
+                    outputs[i]['p'][idx_r, idx_c, :, :, :] = p[i][j]
+        callbacks.on_batch_end(b, batch_logs)
+    callbacks.on_epoch_end(0, {})
+    callbacks.on_train_end()
+    return history.history
 
 
 @ingredients.capture
