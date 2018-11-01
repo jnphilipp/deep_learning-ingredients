@@ -87,6 +87,7 @@ def save(path, model, _log, name=None):
     sys.stdout = stdout
 
     model.save(os.path.join(path, '%s.h5' % (name if name else 'model')))
+    plot(model, path, name=(name if name else 'model'))
 
 
 @ingredients.capture

@@ -27,7 +27,9 @@ def save(path, models, train_history=None):
             if train_history:
                 history.save(path, '%s-train_history' % model.name,
                              train_history)
+                history.plot(path, '%s-train_history' % model.name)
     except TypeError:
         models_ingredients.save(path, models)
         if train_history:
             history.save(path, 'train_history', train_history)
+            history.plot(path)
