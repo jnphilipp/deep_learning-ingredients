@@ -3,11 +3,14 @@
 import numpy as np
 import os
 
-from ingredients.experiments import ingredients
+from sacred import Ingredient
 
 
-@ingredients.capture
-def scatter(path, name, data, legend=True, xlim=None, ylim=None):
+ingredient = Ingredient('plots')
+
+
+@ingredient.capture
+def scatter(name, data, legend=True, xlim=None, ylim=None, _run=None):
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.cm
@@ -33,13 +36,13 @@ def scatter(path, name, data, legend=True, xlim=None, ylim=None):
 
     if legend:
         ax.legend(loc=9, bbox_to_anchor=(0.5, -0.07), ncol=4)
-    fig.savefig(os.path.join(path, '%s.png' % name), format='png',
-                bbox_inches='tight')
+    fig.savefig(os.path.join(_run.observers[0].run_dir, '%s.png' % name),
+                format='png', bbox_inches='tight')
     plt.close()
 
 
-@ingredients.capture
-def lines(path, name, x1_data, x2_data=None, legend=True):
+@ingredient.capture
+def lines(name, x1_data, x2_data=None, legend=True, _run=None):
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
@@ -72,8 +75,6 @@ def lines(path, name, x1_data, x2_data=None, legend=True):
                loc=9,
                bbox_to_anchor=(0.5, -0.07),
                ncol=4)
-    fig.savefig(os.path.join(path, '%s.png' % name),
-                format='png',
-                bbox_inches='tight')
+    fig.savefig(os.path.join(_run.observers[0].run_dir, '%s.png' % name),
+                format='png', bbox_inches='tight')
     plt.close()
-
