@@ -2,10 +2,10 @@
 
 import numpy as np
 
-from ingredients.datasets import ingredients
+from . import ingredient
 
 
-@ingredients.capture
+@ingredient.capture
 def split(X, y, validation_split, _log, *args, **kwargs):
     _log.info('Making validation split [samples=%s: validation split=%s].' %
               (len(X), validation_split))

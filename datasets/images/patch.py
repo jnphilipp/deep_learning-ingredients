@@ -2,11 +2,12 @@
 
 import numpy as np
 
-from ingredients.datasets import ingredients
 from keras import backend as K
 
+from .. import ingredient
 
-@ingredients.capture
+
+@ingredient.capture
 def patch(x, height, width, *args, **kwargs):
     if K.image_data_format() == 'channels_first':
         r = x.shape[1]

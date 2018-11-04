@@ -6,10 +6,11 @@ from keras.layers import *
 from keras.layers import deserialize as deserialize_layer
 from keras.models import Model
 from keras.optimizers import deserialize as deserialize_optimizers
-from ingredients.models import ingredients
+
+from . import ingredient
 
 
-@ingredients.capture
+@ingredient.capture
 def build(vocab_size, N, layers, outputs, optimizer, _log,
           loss_weights=None, sample_weight_mode=None, weighted_metrics=None,
           target_tensors=None, *args, **kwargs):

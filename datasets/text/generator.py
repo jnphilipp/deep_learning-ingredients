@@ -2,10 +2,10 @@
 
 import numpy as np
 
-from ingredients.datasets import ingredients
+from .. import ingredient
 
 
-@ingredients.config
+@ingredient.config
 def config():
     nb_words_normal = {
         'loc': 7,
@@ -17,7 +17,7 @@ def config():
     }
 
 
-@ingredients.capture
+@ingredient.capture
 def random_text(random_vocab, nb_words_normal, word_length_normal,
                 max_len, batch_size):
     while True:

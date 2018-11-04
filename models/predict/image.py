@@ -6,18 +6,19 @@ import os
 
 from decorators import runtime
 from ingredients.datasets.images import load_img
-from ingredients.models import ingredients
 from keras import backend as K
 from keras.callbacks import BaseLogger, CallbackList, History, ProgbarLogger
 from keras.preprocessing.image import array_to_img
 
+from .. import ingredient
 
-@ingredients.config
+
+@ingredient.config
 def config():
     overlap = 0.75
 
 
-@ingredients.capture
+@ingredient.capture
 def image(model, image_path, batch_size, overlap, data_format=None):
     def offset(size, diff, overlap):
         return math.floor(diff / math.ceil(diff / (size * (1 - overlap))))
@@ -164,7 +165,7 @@ def image(model, image_path, batch_size, overlap, data_format=None):
     return history, outputs
 
 
-@ingredients.capture
+@ingredient.capture
 @runtime
 def _predict_loop(model, batch_size, inputs, outputs, metrics, data_format):
     N = inputs['nb_r'] * inputs['nb_c']
@@ -238,7 +239,7 @@ def _predict_loop(model, batch_size, inputs, outputs, metrics, data_format):
     return history.history
 
 
-@ingredients.capture
+@ingredient.capture
 def outputs_to_img(outputs, img, base_path, data_format=None):
     if data_format is None:
         data_format = K.image_data_format()

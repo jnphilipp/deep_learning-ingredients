@@ -7,10 +7,11 @@ from keras.layers import *
 from keras.layers import deserialize as deserialize_layer
 from keras.models import Model
 from keras.optimizers import deserialize as deserialize_optimizers
-from ingredients.models import ingredients
+
+from . import ingredient
 
 
-@ingredients.capture
+@ingredient.capture
 def build(grayscale, rows, cols, blocks, layers, outputs, optimizer, _log,
           loss_weights=None, sample_weight_mode=None, weighted_metrics=None,
           target_tensors=None, *args, **kwargs):
@@ -115,7 +116,7 @@ def build(grayscale, rows, cols, blocks, layers, outputs, optimizer, _log,
     return model
 
 
-@ingredients.capture(prefix='layers')
+@ingredient.capture(prefix='layers')
 def conv2d(x, conv2d_config, dropout=None, filters=None):
     if dropout and dropout['t'] == 'layerwise':
         x = deserialize_layer(dropout)(x)
@@ -125,7 +126,7 @@ def conv2d(x, conv2d_config, dropout=None, filters=None):
     return Conv2D.from_config(conv2d_config)(x)
 
 
-@ingredients.capture(prefix='layers')
+@ingredient.capture(prefix='layers')
 def conv2d_bn(x, bn_config, conv2d_config, activation, dropout=None,
               filters=None):
     if dropout and dropout['t'] == 'layerwise':
@@ -138,7 +139,7 @@ def conv2d_bn(x, bn_config, conv2d_config, activation, dropout=None,
     return Activation(activation)(x)
 
 
-@ingredients.capture(prefix='layers')
+@ingredient.capture(prefix='layers')
 def block2d(inputs, N, conv2d_config, strides, pool, dropout=None,
             filters=None, *args, **kwargs):
     for j in range(N):
@@ -160,7 +161,7 @@ def block2d(inputs, N, conv2d_config, strides, pool, dropout=None,
     return x
 
 
-@ingredients.capture(prefix='layers')
+@ingredient.capture(prefix='layers')
 def block2d_bn(inputs, N, bn_config, conv2d_config, activation, strides, pool,
                dropout=None, filters=None, *args, **kwargs):
     for j in range(N):
@@ -184,7 +185,7 @@ def block2d_bn(inputs, N, bn_config, conv2d_config, activation, strides, pool,
     return x
 
 
-@ingredients.capture(prefix='layers')
+@ingredient.capture(prefix='layers')
 def upblock2d(inputs, N, conv2d_config, strides, transpose, dropout=None,
               filters=None, *args, **kwargs):
     for j in range(N):
@@ -203,7 +204,7 @@ def upblock2d(inputs, N, conv2d_config, strides, transpose, dropout=None,
     return x
 
 
-@ingredients.capture(prefix='layers')
+@ingredient.capture(prefix='layers')
 def upblock2d_bn(inputs, filters, N, bn_config, conv2d_config, activation,
                  strides, transpose, dropout=None, *args, **kwargs):
     for j in range(N):

@@ -4,10 +4,10 @@ import h5py
 import numpy as np
 import os
 
-from ingredients.datasets import ingredients
+from . import ingredient
 
 
-@ingredients.capture
+@ingredient.capture
 def load(DATASETS_DIR, dataset, which_set, _log, names=[]):
     _log.info('Loading h5py [%s: %s].' % (dataset, which_set))
 
@@ -30,21 +30,21 @@ def load(DATASETS_DIR, dataset, which_set, _log, names=[]):
             return matrices
 
 
-@ingredients.capture
+@ingredient.capture
 def len(DATASETS_DIR, dataset, which_set, name):
     with h5py.File(os.path.join(DATASETS_DIR, dataset, which_set), 'r') as f:
         ds = f[name]
         return ds.shape[0]
 
 
-@ingredients.capture
+@ingredient.capture
 def shape(DATASETS_DIR, dataset, which_set, name):
     with h5py.File(os.path.join(DATASETS_DIR, dataset, which_set), 'r') as f:
         ds = f[name]
         return ds.shape
 
 
-@ingredients.capture
+@ingredient.capture
 def save(path, name, matrices):
     assert type(matrices) == dict
 

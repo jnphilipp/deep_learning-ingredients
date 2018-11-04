@@ -7,16 +7,17 @@ from keras import backend as K
 from keras.models import load_model
 from keras.utils import plot_model
 from keras.utils.layer_utils import count_params
-from ingredients.models import (autoencoder, cnn, dense, densely, ingredients,
-                                rnn, seq2seq, siamese)
+
+from . import (autoencoder, cnn, dense, densely, ingredient, rnn, seq2seq,
+               siamese)
 
 
-@ingredients.config
+@ingredient.config
 def config():
     path = None
 
 
-@ingredients.capture
+@ingredient.capture
 def get(path, net_type, _log, *args, **kwargs):
     net_types = ['autoencoder', 'cnn', 'dense', 'densely', 'rnn', 'seq2seq',
                  'siamese']
@@ -55,7 +56,7 @@ def get(path, net_type, _log, *args, **kwargs):
     return model
 
 
-@ingredients.capture
+@ingredient.capture
 def load(path, _log):
     if path is None:
         _log.critical('No path given to load model.')
@@ -70,33 +71,29 @@ def load(path, _log):
         return models
 
 
-@ingredients.capture
-def save(path, model, _log, name=None):
+@ingredient.capture
+def save(model, name=None, _log=None, _run=None):
     _log.info('Save model [%s]' % name if name else 'Save model')
 
-    with open(os.path.join(path, '%s.json' % (name if name else 'model')), 'w',
-              encoding='utf8') as f:
+    path = os.path.join(_run.observers[0].run_dir,
+                        '%s.json' % (name if name else 'model'))
+    with open(path, 'w', encoding='utf8') as f:
         f.write(model.to_json())
         f.write('\n')
 
+    path = os.path.join(_run.observers[0].run_dir,
+                        '%ssummary' % ('%s_' % name if name else ''))
     stdout = sys.stdout
-    with open(os.path.join(path, '%ssummary' % ('%s_' % name if name else '')),
-              'w', encoding='utf8') as f:
+    with open(path, 'w', encoding='utf8') as f:
         sys.stdout = f
         model.summary()
     sys.stdout = stdout
 
-    model.save(os.path.join(path, '%s.h5' % (name if name else 'model')))
-    plot(model, path, name=(name if name else 'model'))
+    model.save(os.path.join(_run.observers[0].run_dir,
+                            '%s.h5' % (name if name else 'model')))
 
 
-@ingredients.capture
-def plot(model, path, _log, name='model'):
-    _log.info('Plot %s' % name)
-    plot_model(model, to_file=os.path.join(path, '%s.png' % name))
-
-
-@ingredients.capture
+@ingredient.capture
 def make_function(model, input_layers, output_layers, _log):
     _log.info('Make function')
 
@@ -133,3 +130,12 @@ def make_function(model, input_layers, output_layers, _log):
         else:
             outputs.append(get_layer(layer).output)
     return K.function(inputs, outputs)
+
+
+@ingredient.command
+def plot(model=None, name='model', _log=None, _run=None):
+    _log.info('Plot %s' % name)
+    if model is None:
+        model = get()
+    plot_model(model, to_file=os.path.join(_run.observers[0].run_dir,
+                                           '%s.png' % name))

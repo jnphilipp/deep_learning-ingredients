@@ -5,13 +5,15 @@ import numpy as np
 import os
 import re
 
-from ingredients.datasets import ingredients
 from keras import backend as K
 from keras.preprocessing import image
 from keras.utils import np_utils
 
 
-@ingredients.config
+from .. import ingredient
+
+
+@ingredient.config
 def config():
     ext = 'jpg|jpeg|bmp|png|ppm'
     grayscale = False
@@ -23,7 +25,7 @@ def config():
     y_fields = []
 
 
-@ingredients.capture
+@ingredient.capture
 def list_pictures(directory, ext):
     for root, _, files in os.walk(directory):
         for f in files:
@@ -31,7 +33,7 @@ def list_pictures(directory, ext):
                 yield os.path.join(root, f)
 
 
-@ingredients.capture
+@ingredient.capture
 def load_img(path, grayscale, rescale):
     img = image.img_to_array(image.load_img(path, grayscale))
     if rescale:
@@ -39,7 +41,7 @@ def load_img(path, grayscale, rescale):
     return img
 
 
-@ingredients.capture
+@ingredient.capture
 def from_directory(DATASETS_DIR, dataset, which_set, masks, load_images, _log):
     def load_dir(path):
         for p in list_pictures(path):
@@ -81,7 +83,7 @@ def from_directory(DATASETS_DIR, dataset, which_set, masks, load_images, _log):
         return imgs, nb_classes
 
 
-@ingredients.capture
+@ingredient.capture
 def load(DATASETS_DIR, dataset, which_set, ext, grayscale, masks, load_images,
          _log, X_fields=[], y_fields=[], **kwargs):
     _log.info('Loading images [%s: %s].' % (dataset, which_set))

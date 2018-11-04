@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from ingredients.datasets import ingredients
 from keras import backend as K, datasets
 from keras.utils import to_categorical
 
+from . import ingredient
 
-@ingredients.capture
+
+@ingredient.capture
 def mnist(_log):
     _log.info('Loading MNIST.')
 

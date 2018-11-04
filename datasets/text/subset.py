@@ -4,10 +4,10 @@ import math
 import os
 import sys
 
-from ingredients.datasets import ingredients
+from .. import ingredient
 
 
-@ingredients.capture
+@ingredient.capture
 def generate(DATASETS_DIR, dataset, new_set, max_vocab_size, _log,
              filters=None, clean=None):
     _log.info('Generating subset [%s: %s]' % (dataset, new_set))

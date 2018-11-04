@@ -8,10 +8,11 @@ from keras.layers import *
 from keras.layers import deserialize as deserialize_layer
 from keras.models import Model
 from keras.optimizers import deserialize as deserialize_optimizers
-from ingredients.models import ingredients
+
+from . import ingredient
 
 
-@ingredients.capture
+@ingredient.capture
 def build(grayscale, rows, cols, blocks, layers, outputs, optimizer, _log,
           loss_weights=None, sample_weight_mode=None, weighted_metrics=None,
           target_tensors=None, *args, **kwargs):
@@ -106,7 +107,7 @@ def build(grayscale, rows, cols, blocks, layers, outputs, optimizer, _log,
     return model
 
 
-@ingredients.capture(prefix='layers')
+@ingredient.capture(prefix='layers')
 def conv2d(x, k, bottleneck, bottleneck2d_config, conv2d_config, dropout=None):
     if bottleneck:
         x = Conv2D.from_config(dict(bottleneck2d_config,
@@ -116,7 +117,7 @@ def conv2d(x, k, bottleneck, bottleneck2d_config, conv2d_config, dropout=None):
     return Conv2D.from_config(dict(conv2d_config, **{'filters': k}))(x)
 
 
-@ingredients.capture(prefix='layers')
+@ingredient.capture(prefix='layers')
 def conv2d_bn(x, k, bottleneck, bn_config, bottleneck2d_config, conv2d_config,
               activation, dropout=None):
     if bottleneck:
@@ -131,7 +132,7 @@ def conv2d_bn(x, k, bottleneck, bn_config, bottleneck2d_config, conv2d_config,
     return Activation(activation)(x)
 
 
-@ingredients.capture(prefix='layers')
+@ingredient.capture(prefix='layers')
 def block2d(inputs, filters, N, k, bottleneck, bottleneck2d_config,
             conv2d_config, strides, theta, pool, concat_axis, dropout=None,
             *args, **kwargs):
@@ -159,7 +160,7 @@ def block2d(inputs, filters, N, k, bottleneck, bottleneck2d_config,
     return x, filters
 
 
-@ingredients.capture(prefix='layers')
+@ingredient.capture(prefix='layers')
 def block2d_bn(inputs, filters, N, k, bottleneck, bn_config,
                bottleneck2d_config, conv2d_config, activation, strides, theta,
                pool, concat_axis, dropout=None, *args, **kwargs):
@@ -191,7 +192,7 @@ def block2d_bn(inputs, filters, N, k, bottleneck, bn_config,
     return x, filters
 
 
-@ingredients.capture(prefix='layers')
+@ingredient.capture(prefix='layers')
 def upblock2d(inputs, filters, N, k, bottleneck, bottleneck2d_config,
               conv2d_config, strides, theta, transpose, concat_axis,
               dropout=None, *args, **kwargs):
@@ -216,7 +217,7 @@ def upblock2d(inputs, filters, N, k, bottleneck, bottleneck2d_config,
     return x, filters
 
 
-@ingredients.capture(prefix='layers')
+@ingredient.capture(prefix='layers')
 def upblock2d_bn(inputs, filters, N, k, bottleneck, bn_config,
                  bottleneck2d_config, conv2d_config, activation, strides,
                  theta, transpose, concat_axis, dropout=None, *args, **kwargs):

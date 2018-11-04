@@ -2,12 +2,13 @@
 
 import numpy as np
 
-from ingredients.datasets import ingredients
 from keras import backend as K
 from scipy import ndimage
 
+from .. import ingredient
 
-@ingredients.capture
+
+@ingredient.capture
 def speckle(x):
     """This creates larger "blotches" of noise which look more realistic than
     just adding gaussian noise assumes pixels ranging from 0 to 1

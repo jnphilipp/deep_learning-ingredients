@@ -6,10 +6,11 @@ from keras import backend as K
 from keras.layers import deserialize as deserialize_layer, Input, Dense
 from keras.models import Model
 from keras.optimizers import deserialize
-from ingredients.models import ingredients
+
+from . import ingredient
 
 
-@ingredients.capture
+@ingredient.capture
 def build(input_shape, N, layers, outputs, optimizer, _log, loss_weights=None,
           sample_weight_mode=None, weighted_metrics=None, target_tensors=None,
           *args, **kwargs):

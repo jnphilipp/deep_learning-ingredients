@@ -2,10 +2,10 @@
 
 import os
 
-from ingredients.datasets import ingredients
+from .. import ingredient
 
 
-@ingredients.capture
+@ingredient.capture
 def lines(DATASETS_DIR, dataset, which_set, _log, filters=None, clean=None):
     _log.info('Loading lines [%s: %s]' % (dataset, which_set))
     lines = []

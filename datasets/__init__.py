@@ -3,18 +3,18 @@
 import os
 
 from sacred import Ingredient
-ingredients = Ingredient('datasets')
+ingredient = Ingredient('datasets')
 
 
-from ingredients import PROJECT_DIR
-from .core import *
 from . import h5py
 from . import images
 from . import json
 from . import keras
 from . import text
+from .core import *
+from .. import PROJECT_DIR
 
 
-@ingredients.config
+@ingredient.config
 def config():
     DATASETS_DIR = os.path.join(PROJECT_DIR, 'datasets')

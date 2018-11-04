@@ -4,11 +4,12 @@ from keras import backend as K
 from keras.layers import Input, Lambda
 from keras.models import Model
 from keras.optimizers import deserialize
-from ingredients import models
-from ingredients.models import ingredients
+
+from . import ingredient
+from .. import models
 
 
-@ingredients.capture
+@ingredient.capture
 def build(inner_net_type, outputs, optimizer, _log, loss_weights=None,
           sample_weight_mode=None, weighted_metrics=None, target_tensors=None,
           *args, **kwargs):

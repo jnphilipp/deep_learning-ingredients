@@ -4,11 +4,12 @@ import json
 import numpy as np
 import os
 
-from ingredients.datasets import ingredients
 from keras.utils import np_utils
 
+from . import ingredient
 
-@ingredients.capture
+
+@ingredient.capture
 def load(DATASETS_DIR, dataset, which_set, vocab, _log, fclean=None):
     _log.info('Loading json [%s: %s].' % (dataset, which_set))
 

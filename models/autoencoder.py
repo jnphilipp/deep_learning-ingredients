@@ -3,11 +3,12 @@
 from keras.layers import Input
 from keras.models import Model
 from keras.optimizers import deserialize
-from ingredients import models
-from ingredients.models import ingredients
+
+from . import ingredient
+from .. import models
 
 
-@ingredients.capture
+@ingredient.capture
 def build(encoder_net_type, decoder_net_type, layers, loss, metrics, optimizer,
           _log, loss_weights=None, sample_weight_mode=None,
           weighted_metrics=None, target_tensors=None, *args, **kwargs):

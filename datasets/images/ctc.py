@@ -3,21 +3,21 @@
 import cairocffi as cairo
 import numpy as np
 
-from ingredients.datasets import ingredients
 from keras import backend as K
 from keras.preprocessing.image import random_rotation
 
 from .patch import patch
+from .. import ingredient
 
 
-@ingredients.config
+@ingredient.config
 def config():
     fonts = ['Century Schoolbook', 'Courier', 'STIX', 'URW Chancery L',
              'FreeMono']
     rg = 90
 
 
-@ingredients.capture
+@ingredient.capture
 def paint_text(text, height, width, fonts, font_size, font_rgb, rg):
     """Paints the string in a random location in a random font, with a slight
     random rotation
