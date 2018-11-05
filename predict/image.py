@@ -10,7 +10,7 @@ from keras import backend as K
 from keras.callbacks import BaseLogger, CallbackList, History, ProgbarLogger
 from keras.preprocessing.image import array_to_img
 
-from .. import ingredient
+from . import ingredient
 
 
 @ingredient.config
