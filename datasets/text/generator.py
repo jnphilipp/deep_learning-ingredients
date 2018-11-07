@@ -5,16 +5,16 @@ import numpy as np
 from .. import ingredient
 
 
-@ingredient.config
-def config():
-    nb_words_normal = {
-        'loc': 7,
-        'scale': 1
-    }
-    word_length_normal = {
-        'loc': 5,
-        'scale': 1
-    }
+# @ingredient.config
+# def config():
+#     nb_words_normal = {
+#         'loc': 7,
+#         'scale': 1
+#     }
+#     word_length_normal = {
+#         'loc': 5,
+#         'scale': 1
+#     }
 
 
 @ingredient.capture
@@ -25,9 +25,8 @@ def random_text(random_vocab, nb_words_normal, word_length_normal,
         while len(sentences) < batch_size:
             nb_words = int(np.random.normal(**nb_words_normal))
             word_length = int(np.random.normal(**word_length_normal))
-            s =  ' '.join([''.join(np.random.choice(random_vocab, word_length))
-                for j in range(nb_words)
-            ])
+            s = ' '.join([''.join(np.random.choice(random_vocab, word_length))
+                          for j in range(nb_words)])
 
             if len(s) < max_len:
                 sentences.append(s)

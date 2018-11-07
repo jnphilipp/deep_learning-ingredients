@@ -13,16 +13,16 @@ from keras.utils import np_utils
 from .. import ingredient
 
 
-@ingredient.config
-def config():
-    ext = 'jpg|jpeg|bmp|png|ppm'
-    grayscale = False
-    masks = []
-    load_images = True
-    rescale = 1./255
+# @ingredient.config
+# def config():
+#     ext = 'jpg|jpeg|bmp|png|ppm'
+#     grayscale = False
+#     masks = []
+#     load_images = True
+#     rescale = 1./255
 
-    X_fields = []
-    y_fields = []
+#     X_fields = []
+#     y_fields = []
 
 
 @ingredient.capture
