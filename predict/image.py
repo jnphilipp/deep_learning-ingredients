@@ -13,21 +13,10 @@ from keras.preprocessing.image import array_to_img
 from . import ingredient
 
 
-@ingredient.config
-def config():
-    overlap = 0.75
-
-
 @ingredient.capture
-def image(model, image_path, batch_size, overlap, data_format=None):
+def image(model, image_path, batch_size, overlap, rescale, data_format=None):
     def offset(size, diff, overlap):
         return math.floor(diff / math.ceil(diff / (size * (1 - overlap))))
-
-    def map_c(i, j, b, l):
-        return int(((i * b) + j) / l)
-
-    def map_r(i, j, b, l):
-        return ((i * b) + j) % l
 
     if data_format is None:
         data_format = K.image_data_format()
@@ -55,7 +44,8 @@ def image(model, image_path, batch_size, overlap, data_format=None):
             inputs[i]['c'] = inputs[i]['shape'][2]
             inputs[i]['grayscale'] = inputs[i]['shape'][3] == 1
 
-        inputs[i]['img'] = load_img(image_path, inputs[i]['grayscale'])
+        inputs[i]['img'] = load_img(image_path, inputs[i]['grayscale'],
+                                    rescale)
         if data_format == 'channels_first':
             inputs[i]['img_r'] = inputs[i]['img'].shape[1]
             inputs[i]['img_c'] = inputs[i]['img'].shape[2]
@@ -107,8 +97,8 @@ def image(model, image_path, batch_size, overlap, data_format=None):
             shape = (inputs['nb_r'], inputs['nb_c']) + tuple(tshape[1:])
         outputs[i]['p'] = np.zeros(shape)
 
-    history, runtime = _predict_loop(model, inputs=inputs, outputs=outputs,
-                                     metrics=metrics, data_format=data_format)
+    history, runtime = _predict_loop(model, batch_size, inputs, outputs,
+                                     metrics, data_format)
     history['runtime'] = runtime
 
     for i in range(len(outputs)):
@@ -168,6 +158,12 @@ def image(model, image_path, batch_size, overlap, data_format=None):
 @ingredient.capture
 @runtime
 def _predict_loop(model, batch_size, inputs, outputs, metrics, data_format):
+    def map_c(i, j, b, l):
+        return int(((i * b) + j) / l)
+
+    def map_r(i, j, b, l):
+        return ((i * b) + j) % l
+
     N = inputs['nb_r'] * inputs['nb_c']
     steps = math.ceil(N / batch_size)
 
@@ -240,63 +236,40 @@ def _predict_loop(model, batch_size, inputs, outputs, metrics, data_format):
 
 
 @ingredient.capture
-def outputs_to_img(outputs, img, base_path, data_format=None):
+def outputs_to_img(outputs, img, base_path, rescale, data_format=None):
     if data_format is None:
         data_format = K.image_data_format()
     if data_format not in {'channels_first', 'channels_last'}:
         raise ValueError('Unknown data_format:', data_format)
 
     name, ext = os.path.splitext(os.path.basename(img))
-    img = load_img(img, False)
+    img = load_img(img, False, rescale)
     for i in range(len(outputs)):
         if outputs[i]['t'] == 'class' or outputs[i]['t'] == 'multi':
             if data_format == 'channels_first':
-                img_max = outputs[i]['img'].argmax(axis=0)
-                for j in range(outputs[i]['img'].shape[0]):
-                    if outputs[i]['t'] == 'class':
-                        out = outputs[i]['img'][j, :, :] * \
-                            np.where(img_max == j, img_max, 0)
-                    elif outputs[i]['t'] == 'multi':
-                        out = outputs[i]['img'][j, :, :]
-                        out[out < .5] = 0.
-
-                    p = np.zeros((3,) + out.shape)
-                    p[0, :, :] = out
-                    p[1, :, :] = out
-                    p[2, :, :] = out
-                    p *= img
-
-                    o = outputs[i]['img'][j, :, :].reshape((1,) + out.shape)
-                    path = os.path.join(base_path, '%s-%s:%s%s' %
-                                        (name, outputs[i]['name'], j, ext))
-                    array_to_img(o).save(path)
-                    path = os.path.join(base_path, '%s-%s:%s-map%s' %
-                                        (name, outputs[i]['name'], j, ext))
-                    array_to_img(p).save(path)
+                nb_classes = outputs[i]['img'].shape[0]
             elif data_format == 'channels_last':
-                img_max = outputs[i]['img'].argmax(axis=2)
-                for j in range(outputs[i]['img'].shape[2]):
-                    if outputs[i]['t'] == 'class':
-                        out = outputs[i]['img'][:, :, j] * \
-                            np.where(img_max == j, img_max, 0)
-                    elif outputs[i]['t'] == 'multi':
-                        out = outputs[i]['img'][:, :, j]
-                        out[out < .5] = 0.
+                nb_classes = outputs[i]['img'].shape[2]
 
-                    p = np.zeros(out.shape + (3,))
-                    p[:, :, 0] = out
-                    p[:, :, 1] = out
-                    p[:, :, 2] = out
-                    p *= img
+            for j in range(nb_classes):
+                if data_format == 'channels_first':
+                    p = outputs[i]['img'][j, :, :]
+                    p = np.repeat(p.reshape((1,) + p.shape), 3, axis=0)
+                elif data_format == 'channels_last':
+                    p = outputs[i]['img'][:, :, j]
+                    p = np.repeat(p.reshape(p.shape + (1,)), 3, axis=2)
 
-                    o = outputs[i]['img'][:, :, j].reshape(out.shape + (1,))
-                    path = os.path.join(base_path, '%s-%s:%s%s' %
-                                        (name, outputs[i]['name'], j, ext))
-                    array_to_img(o).save(path)
-                    path = os.path.join(base_path, '%s-%s:%s-map%s' %
-                                        (name, outputs[i]['name'], j, ext))
-                    array_to_img(p).save(path)
+                array_to_img(p).save(os.path.join(base_path, '%s-%s:%s%s' %
+                                     (name, outputs[i]['name'], j, ext)))
+
+                array_to_img(p * img).save(os.path.join(base_path,
+                                                        '%s-%s:%s-map%s' %
+                                           (name, outputs[i]['name'], j, ext)))
         elif outputs[i]['t'] == 'img':
             path = os.path.join(base_path, '%s-%s%s' %
                                 (name, outputs[i]['name'], ext))
             array_to_img(outputs[i]['img']).save(path)
+
+            path = os.path.join(base_path, '%s-%s-map%s' %
+                                (name, outputs[i]['name'], ext))
+            array_to_img(outputs[i]['img'] * img).save(path)
