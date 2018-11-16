@@ -34,13 +34,14 @@ def datagen_from_directory(size, batch_size, train_image_datagen_args,
 
 
 @ingredient.capture
-def ctc_datagen(shape, train_samples, batch_size, create_masks,
+def ctc_datagen(shape, train_samples, batch_size, empty_images, create_masks,
                 train_ctc_image_datagen_args, validation_samples,
                 validation_ctc_image_datagen_args={},
                 class_mode='categorical'):
     train_datagen = CTCImageDataGenerator(**train_ctc_image_datagen_args)
     train_generator = train_datagen.flow(shape, train_samples, batch_size,
-                                         create_masks, class_mode)
+                                         empty_images, create_masks,
+                                         class_mode)
     train_steps = math.ceil(train_samples / batch_size)
 
     if validation_ctc_image_datagen_args and validation_samples:
@@ -48,6 +49,7 @@ def ctc_datagen(shape, train_samples, batch_size, create_masks,
             **validation_ctc_image_datagen_args)
         validation_generator = validation_datagen.flow(shape, train_samples,
                                                        batch_size,
+                                                       empty_images,
                                                        create_masks,
                                                        class_mode)
         validation_steps = math.ceil(validation_samples / batch_size)
