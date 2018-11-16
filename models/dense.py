@@ -8,12 +8,13 @@ from keras.models import Model
 from keras.optimizers import deserialize
 
 from . import ingredient
+from .outputs import outputs
 
 
 @ingredient.capture
-def build(input_shape, N, layers, outputs, optimizer, _log, loss_weights=None,
+def build(input_shape, N, layers, optimizer, loss_weights=None,
           sample_weight_mode=None, weighted_metrics=None, target_tensors=None,
-          *args, **kwargs):
+          _log=None, *args, **kwargs):
     if 'name' in kwargs:
         _log.info('Build Dense model [%s]' % kwargs['name'])
     else:
@@ -43,24 +44,7 @@ def build(input_shape, N, layers, outputs, optimizer, _log, loss_weights=None,
             x = deserialize_layer(layers['dropout'])(x)
 
     # outputs
-    assert set([o['t'] for o in outputs]).issubset(['class', 'vec'])
-
-    outs = []
-    loss = []
-    metrics = {}
-    for output in outputs:
-        loss.append(output['loss'])
-        if 'metrics' in output:
-            metrics[output['name']] = output['metrics']
-
-        if output['t'] == 'class':
-            conf = dict(layers['dense_config'],
-                        **{'units': output['nb_classes'],
-                           'activation': output['activation'],
-                           'name': output['name']})
-            outs.append(Dense.from_config(conf)(x))
-        elif output['t'] == 'vec':
-            outs.append(x)
+    outs, loss, metrics = outputs(x)
 
     # Model
     model = Model(inputs=inputs, outputs=outs,

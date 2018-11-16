@@ -9,12 +9,13 @@ from keras.models import Model
 from keras.optimizers import deserialize as deserialize_optimizers
 
 from . import ingredient
+from .outputs import outputs
 
 
 @ingredient.capture
-def build(grayscale, rows, cols, blocks, layers, outputs, optimizer, _log,
-          loss_weights=None, sample_weight_mode=None, weighted_metrics=None,
-          target_tensors=None, *args, **kwargs):
+def build(grayscale, rows, cols, blocks, layers, optimizer, loss_weights=None,
+          sample_weight_mode=None, weighted_metrics=None, target_tensors=None,
+          _log=None, *args, **kwargs):
     if 'name' in kwargs:
         _log.info('Build CNN model [%s]' % kwargs['name'])
     else:
@@ -53,57 +54,10 @@ def build(grayscale, rows, cols, blocks, layers, outputs, optimizer, _log,
         if i != blocks - 1:
             rows = math.ceil(rows / layers['strides'][0])
             cols = math.ceil(cols / layers['strides'][1])
-    vec = x
 
     # outputs
-    output_types = ['class', 'image', 'mask', 'vec']
-    assert set([o['t'] for o in outputs]).issubset(output_types)
-
-    outs = []
-    loss = []
-    metrics = {}
-    for output in outputs:
-        loss.append(output['loss'])
-        if 'metrics' in output:
-            metrics[output['name']] = output['metrics']
-
-        if output['t'] == 'class':
-            x = Conv2D.from_config(dict(layers['conv2d_config'],
-                                   **{'filters': output['nb_classes'],
-                                      'kernel_size': (int(rows), int(cols)),
-                                      'padding': 'valid'}))(vec)
-            x = Flatten()(x)
-            outs.append(Activation(output['activation'],
-                                   name=output['name'])(x))
-        elif output['t'] == 'image':
-            conf = dict(layers['conv2d_config'],
-                        **{'filters': 1 if output['grayscale'] else 3,
-                           'kernel_size': (1, 1),
-                           'padding': 'same',
-                           'activation': output['activation'],
-                           'name': output['name']})
-            outs.append(Conv2D.from_config(conf)(vec))
-        elif output['t'] == 'mask':
-            s = vec
-            for i in reversed(range(blocks)):
-                shortcut = shortcuts[i][0]
-                filters = shortcuts[i - 1 if i >= 0 else 0][1]
-                if i is not blocks - 1:
-                    s = concatenate([s, shortcut], axis=layers['concat_axis'])
-                else:
-                    s = shortcut
-                if i > 0:
-                    conf = dict(layers['conv2d_config'],
-                                **{'filters': filters,
-                                   'strides': layers['strides']})
-                    s = Conv2DTranspose.from_config(conf)(s)
-            conf = dict(layers['conv2d_config'],
-                        **{'filters': 1,
-                           'activation': 'sigmoid',
-                           'name': output['name']})
-            outs.append(Conv2D.from_config(conf)(s))
-        elif output['t'] == 'vec':
-            outs.append(vec)
+    outs, loss, metrics = outputs(x, rows=int(rows), cols=int(cols),
+                                  shortcuts=shortcuts)
 
     # Model
     model = Model(inputs=inputs, outputs=outs,
