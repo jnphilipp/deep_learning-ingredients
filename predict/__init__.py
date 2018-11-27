@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 
 from sacred import Ingredient
-ingredient = Ingredient('predict')
+
+from .. import models as models_ingredient
 
 
-from .image import image, outputs_to_img
+ingredient = Ingredient('predict', ingredients=[models_ingredient.ingredient])
+
+
+from .image import image

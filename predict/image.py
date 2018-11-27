@@ -5,6 +5,7 @@ import numpy as np
 import os
 
 from decorators import runtime
+from ingredients import models
 from ingredients.datasets.images import load_img
 from keras import backend as K
 from keras.callbacks import BaseLogger, CallbackList, History, ProgbarLogger
@@ -13,8 +14,30 @@ from keras.preprocessing.image import array_to_img
 from . import ingredient
 
 
+@ingredient.command
+def image(images, batch_size=256, _log=None, _run=None):
+    """Visualize predictions from images."""
+    if isinstance(images, str):
+        images = [images]
+
+    model = models.get()
+    for img in images:
+        name, ext = os.path.splitext(os.path.basename(img))
+        _log.info('Karte: "%s"' % name)
+
+        history, outputs = func(model, img, batch_size=batch_size)
+
+        base_dir = os.path.join(_run.observers[0].run_dir, 'images')
+        os.makedirs(base_dir, exist_ok=True)
+
+        matrices = {o['name']: o['img'] for o in outputs}
+        datasets.h5py.save(os.path.join(base_dir, 'probabilities.h5'), name,
+                           matrices)
+        outputs_to_img(outputs, img, base_dir)
+
+
 @ingredient.capture
-def image(model, image_path, batch_size, overlap, rescale, data_format=None):
+def func(model, image_path, batch_size, overlap, rescale, data_format=None):
     def offset(size, diff, overlap):
         return math.floor(diff / math.ceil(diff / (size * (1 - overlap))))
 
