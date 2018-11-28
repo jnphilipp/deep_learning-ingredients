@@ -32,8 +32,7 @@ def image(images, batch_size=256, _log=None, _run=None):
         os.makedirs(base_dir, exist_ok=True)
 
         matrices = {o['name']: o['img'] for o in outputs}
-        datasets.h5py.save(os.path.join(base_dir, 'probabilities.h5'), name,
-                           matrices)
+        save(os.path.join(base_dir, 'probabilities.h5'), name, matrices)
         outputs_to_img(outputs, img, base_dir)
 
 
