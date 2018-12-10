@@ -16,20 +16,20 @@ from . import ingredient
 
 
 @ingredient.command
-def image(images, batch_size=256, _log=None, _run=None):
+def images(images, _log=None, _run=None):
     """Visualize predictions from images."""
     if isinstance(images, str):
         images = [images]
 
+    base_dir = os.path.join(_run.observers[0].run_dir, 'images')
+    os.makedirs(base_dir, exist_ok=True)
+
     model = models.get()
     for img in images:
         name, ext = os.path.splitext(os.path.basename(img))
-        _log.info('Karte: "%s"' % name)
+        _log.info('Image: "%s"' % name)
 
-        history, outputs = func(model, img, batch_size=batch_size)
-
-        base_dir = os.path.join(_run.observers[0].run_dir, 'images')
-        os.makedirs(base_dir, exist_ok=True)
+        history, outputs = func(model, img)
 
         matrices = {o['name']: o['img'] for o in outputs}
         save(os.path.join(base_dir, 'probabilities.h5'), name, matrices)

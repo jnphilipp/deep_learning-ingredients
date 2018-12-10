@@ -8,4 +8,4 @@ from .. import models as models_ingredient
 ingredient = Ingredient('predict', ingredients=[models_ingredient.ingredient])
 
 
-from .image import image
+from .image import images
