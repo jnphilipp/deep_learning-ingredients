@@ -26,7 +26,7 @@ from .. import ingredient
 
 
 @ingredient.capture
-def list_pictures(directory, ext):
+def list_pictures(directory, ext='jpg|jpeg|bmp|png|ppm'):
     for root, _, files in os.walk(directory):
         for f in files:
             if re.match(r'([\w\.-]+\.(?:' + ext + '))', f):
@@ -34,7 +34,7 @@ def list_pictures(directory, ext):
 
 
 @ingredient.capture
-def load_img(path, grayscale, rescale):
+def load_img(path, grayscale, rescale=None):
     img = image.img_to_array(image.load_img(path, grayscale))
     if rescale:
         img *= rescale
@@ -42,23 +42,16 @@ def load_img(path, grayscale, rescale):
 
 
 @ingredient.capture
-def from_directory(DATASETS_DIR, dataset, which_set, masks, load_images, _log):
+def from_directory(DATASETS_DIR, dataset, which_set, _log):
     def load_dir(path):
         for p in list_pictures(path):
             name, ext = os.path.splitext(os.path.basename(p))
-            if re.match(r'.*\.(' + '|'.join(masks) + ')', name):
-                continue
 
             imgs.append({
-                'img': load_img(p) if load_images else p,
+                'img': load_img(p),
                 'name': name,
                 'y': nb_classes
             })
-            for mask in masks:
-                pm = os.path.join(path, '%s.%s%s' % (name, mask, ext))
-                if not os.path.exists(pm):
-                    continue
-                imgs[-1][mask] = load_img(pm, True) if load_images else pm
 
     _log.info('Loading images [%s: %s].' % (dataset, which_set))
     dataset_path = os.path.join(DATASETS_DIR, dataset, which_set)
@@ -77,7 +70,7 @@ def from_directory(DATASETS_DIR, dataset, which_set, masks, load_images, _log):
 
     if nb_classes == 0:
         _log.info('Loaded %d images.' % len(imgs))
-        return (imgs,)
+        return imgs
     else:
         _log.info('Loaded %d images (%d classes).' % (len(imgs), nb_classes))
         return imgs, nb_classes

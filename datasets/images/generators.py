@@ -5,6 +5,7 @@ import math
 from generators import CTCImageDataGenerator
 from keras.preprocessing.image import ImageDataGenerator
 
+from .core import from_directory
 from .. import ingredient, get_full_dataset_path
 
 
@@ -36,12 +37,17 @@ def datagen_from_directory(size, batch_size, train_image_datagen_args,
 @ingredient.capture
 def ctc_datagen(shape, train_samples, batch_size, empty_images, create_masks,
                 train_ctc_image_datagen_args, validation_samples,
+                background_dataset, background_which_set,
                 validation_ctc_image_datagen_args={},
                 class_mode='categorical'):
+    background_images = from_directory(dataset=background_dataset,
+                                       which_set=background_which_set)
+    background_images = [img['img'] for img in background_images]
+
     train_datagen = CTCImageDataGenerator(**train_ctc_image_datagen_args)
     train_generator = train_datagen.flow(shape, train_samples, batch_size,
                                          empty_images, create_masks,
-                                         class_mode)
+                                         background_images, class_mode)
     train_steps = math.ceil(train_samples / batch_size)
 
     if validation_ctc_image_datagen_args and validation_samples:
@@ -51,6 +57,7 @@ def ctc_datagen(shape, train_samples, batch_size, empty_images, create_masks,
                                                        batch_size,
                                                        empty_images,
                                                        create_masks,
+                                                       background_images,
                                                        class_mode)
         validation_steps = math.ceil(validation_samples / batch_size)
 
