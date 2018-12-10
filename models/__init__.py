@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 
 from sacred import Ingredient
-ingredient = Ingredient('models')
+
+from .. import callbacks as callbacks_ingredient
+
+ingredient = Ingredient('models',
+                        ingredients=[callbacks_ingredient.ingredient])
 
 
 from .core import *

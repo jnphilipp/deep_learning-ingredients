@@ -10,6 +10,7 @@ from keras.utils.layer_utils import count_params
 
 from . import (autoencoder, cnn, dense, densely, ingredient, rnn, seq2seq,
                siamese)
+from .. import callbacks
 
 
 @ingredient.config
@@ -53,7 +54,7 @@ def get(path, net_type, _log, *args, **kwargs):
     _log.info('Trainable params: {:,}'.format(trainable_count))
     _log.info('Non-trainable params: {:,}'.format(non_trainable_count))
 
-    return model
+    return model, callbacks.get()
 
 
 @ingredient.capture
