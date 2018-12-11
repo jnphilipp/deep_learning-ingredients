@@ -24,7 +24,7 @@ def images(images, _log=None, _run=None):
     base_dir = os.path.join(_run.observers[0].run_dir, 'images')
     os.makedirs(base_dir, exist_ok=True)
 
-    model = models.get()
+    model = models.load()
     for img in images:
         name, ext = os.path.splitext(os.path.basename(img))
         _log.info('Image: "%s"' % name)
