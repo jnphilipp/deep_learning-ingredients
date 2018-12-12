@@ -9,3 +9,4 @@ ingredient = Ingredient('predict', ingredients=[models_ingredient.ingredient])
 
 
 from .image import images
+from .boxes import boxes
