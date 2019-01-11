@@ -2,7 +2,7 @@
 
 import math
 
-from generators import CTCImageDataGenerator
+from generators import CTCImageDataGenerator, PatchImageDataGenerator
 from keras.preprocessing.image import ImageDataGenerator
 
 from .core import from_directory
@@ -27,6 +27,34 @@ def datagen_from_directory(size, batch_size, train_image_datagen_args,
         validation_generator = validation_datagen.flow_from_directory(
             validation_set, size, batch_size=batch_size, class_mode=class_mode)
         validation_steps = math.ceil(validation_generator.samples / batch_size)
+    else:
+        validation_generator = None
+        validation_steps = None
+
+    return train_generator, train_steps, validation_generator, validation_steps
+
+
+@ingredient.capture
+def patchdatagen_from_directory(shape, train_set, train_samples, batch_size,
+                                train_patch_image_datagen_args, validation_set,
+                                validation_samples,
+                                validation_patch_image_datagen_args={}):
+    X, y = from_directory(which_set=train_set)
+
+    train_datagen = PatchImageDataGenerator(**train_patch_image_datagen_args)
+    train_generator = train_datagen.flow(X, y, shape, train_samples,
+                                         batch_size)
+    train_steps = math.ceil(train_samples / batch_size)
+
+    if validation_set and validation_samples and \
+            validation_patch_image_datagen_args:
+        X, y = from_directory(which_set=validation_set)
+        validation_datagen = PatchImageDataGenerator(
+            **validation_patch_image_datagen_args)
+        validation_generator = validation_datagen.flow(X, y, shape,
+                                                       validation_samples,
+                                                       batch_size)
+        validation_steps = math.ceil(validation_samples / batch_size)
     else:
         validation_generator = None
         validation_steps = None

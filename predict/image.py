@@ -7,7 +7,7 @@ import os
 from decorators import runtime
 from ingredients import models
 from ingredients.datasets.h5py import save
-from ingredients.datasets.images import load_img
+from ingredients.datasets.images import load
 from keras import backend as K
 from keras.callbacks import BaseLogger, CallbackList, History, ProgbarLogger
 from keras.preprocessing.image import array_to_img
@@ -27,7 +27,7 @@ def images(images, _log=None, _run=None):
     model = models.load()
     for img in images:
         name, ext = os.path.splitext(os.path.basename(img))
-        _log.info('Image: "%s"' % name)
+        _log.info(f'Image: {name}')
 
         history, outputs = func(model, img)
 
@@ -59,16 +59,25 @@ def func(model, image_path, batch_size, overlap, rescale, data_format=None):
 
         inputs.append({'shape': model.inputs[i].shape.as_list(), 'name': name})
         if data_format == 'channels_first':
-            inputs[i]['grayscale'] = inputs[i]['shape'][1] == 1
+            if inputs[i]['shape'][1] == 1:
+                inputs[i]['color_mode'] = 'grayscale'
+            elif inputs[i]['shape'][1] == 3:
+                inputs[i]['color_mode'] = 'rgb'
+            elif inputs[i]['shape'][1] == 4:
+                inputs[i]['color_mode'] = 'rgba'
             inputs[i]['r'] = inputs[i]['shape'][2]
             inputs[i]['c'] = inputs[i]['shape'][3]
         elif data_format == 'channels_last':
             inputs[i]['r'] = inputs[i]['shape'][1]
             inputs[i]['c'] = inputs[i]['shape'][2]
-            inputs[i]['grayscale'] = inputs[i]['shape'][3] == 1
+            if inputs[i]['shape'][3] == 1:
+                inputs[i]['color_mode'] = 'grayscale'
+            elif inputs[i]['shape'][3] == 3:
+                inputs[i]['color_mode'] = 'rgb'
+            elif inputs[i]['shape'][3] == 4:
+                inputs[i]['color_mode'] = 'rgba'
 
-        inputs[i]['img'] = load_img(image_path, inputs[i]['grayscale'],
-                                    rescale)
+        inputs[i]['img'] = load(image_path, inputs[i]['color_mode']) * rescale
         if data_format == 'channels_first':
             inputs[i]['img_r'] = inputs[i]['img'].shape[1]
             inputs[i]['img_c'] = inputs[i]['img'].shape[2]
@@ -170,12 +179,32 @@ def func(model, image_path, batch_size, overlap, rescale, data_format=None):
                             inputs['img_c'])
 
                 if data_format == 'channels_first':
-                    outputs[i]['img'][:, top:bottom, left:right] += \
-                        outputs[i]['p'][:, j, k]
+                    cur_img_shape = outputs[i]['img'][:, top:bottom,
+                                                      left:right].shape
+                    cur_p_shape = outputs[i]['p'][:, j, k].shape
+                    if cur_p_shape != (1,) and cur_img_shape != cur_p_shape:
+                        repeat1 = math.floor(cur_img_shape[1] / cur_p_shape[1])
+                        repeat2 = math.floor(cur_img_shape[2] / cur_p_shape[2])
+                        outputs[i]['img'][:, top:bottom, left:right] += \
+                            np.repeat(np.repeat(outputs[i]['p'][:, j, k],
+                                                repeat1, 1), repeat2, 2)
+                    else:
+                        outputs[i]['img'][:, top:bottom, left:right] += \
+                            outputs[i]['p'][:, j, k]
                     count[:, top:bottom, left:right] += 1
                 elif data_format == 'channels_last':
-                    outputs[i]['img'][top:bottom, left:right, :] += \
-                        outputs[i]['p'][j, k, :]
+                    cur_img_shape = outputs[i]['img'][top:bottom, left:right,
+                                                      :].shape
+                    cur_p_shape = outputs[i]['p'][j, k, :].shape
+                    if cur_p_shape != (1,) and cur_img_shape != cur_p_shape:
+                        repeat0 = math.floor(cur_img_shape[0] / cur_p_shape[0])
+                        repeat1 = math.floor(cur_img_shape[1] / cur_p_shape[1])
+                        outputs[i]['img'][top:bottom, left:right, :] += \
+                            np.repeat(np.repeat(outputs[i]['p'][j, k, :],
+                                                repeat0, 0), repeat1, 1)
+                    else:
+                        outputs[i]['img'][top:bottom, left:right, :] += \
+                            outputs[i]['p'][j, k, :]
                     count[top:bottom, left:right, :] += 1
         outputs[i]['img'] /= count
         del outputs[i]['p']
@@ -271,8 +300,10 @@ def outputs_to_img(outputs, img, base_path, rescale, data_format=None):
         raise ValueError('Unknown data_format:', data_format)
 
     name, ext = os.path.splitext(os.path.basename(img))
-    img = load_img(img, False, rescale)
+    img = load(img) * rescale
     for i in range(len(outputs)):
+        output_name = outputs[i]['name']
+
         if outputs[i]['t'] == 'class' or outputs[i]['t'] == 'multi':
             if data_format == 'channels_first':
                 nb_classes = outputs[i]['img'].shape[0]
@@ -287,17 +318,16 @@ def outputs_to_img(outputs, img, base_path, rescale, data_format=None):
                     p = outputs[i]['img'][:, :, j]
                     p = np.repeat(p.reshape(p.shape + (1,)), 3, axis=2)
 
-                array_to_img(p).save(os.path.join(base_path, '%s-%s:%s%s' %
-                                     (name, outputs[i]['name'], j, ext)))
+                path = os.path.join(base_path,
+                                    f'{name}-{output_name}:{j}{ext}')
+                array_to_img(p * 255, scale=False).save(path)
 
-                array_to_img(p * img).save(os.path.join(base_path,
-                                                        '%s-%s:%s-map%s' %
-                                           (name, outputs[i]['name'], j, ext)))
+                path = os.path.join(base_path,
+                                    f'{name}-{output_name}:{j}-image{ext}')
+                array_to_img(p * img * 255, scale=False).save(path)
         elif outputs[i]['t'] == 'img':
-            path = os.path.join(base_path, '%s-%s%s' %
-                                (name, outputs[i]['name'], ext))
+            path = os.path.join(base_path, f'{name}-{output_name}{ext}')
             array_to_img(outputs[i]['img']).save(path)
 
-            path = os.path.join(base_path, '%s-%s-map%s' %
-                                (name, outputs[i]['name'], ext))
+            path = os.path.join(base_path, f'{name}-{output_name}-image{ext}')
             array_to_img(outputs[i]['img'] * img).save(path)
