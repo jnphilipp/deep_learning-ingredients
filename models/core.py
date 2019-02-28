@@ -8,8 +8,8 @@ from keras.models import load_model
 from keras.utils import plot_model
 from keras.utils.layer_utils import count_params
 
-from . import (autoencoder, cnn, dense, densely, ingredient, rnn, seq2seq,
-               siamese)
+from . import (autoencoder, capsule, cnn, dense, densely, ingredient, rnn,
+               seq2seq, siamese)
 from .. import callbacks
 
 
@@ -20,13 +20,15 @@ def config():
 
 @ingredient.capture
 def get(path, net_type, _log, *args, **kwargs):
-    net_types = ['autoencoder', 'cnn', 'dense', 'densely', 'rnn', 'seq2seq',
-                 'siamese']
+    net_types = ['autoencoder', 'capsule', 'cnn', 'dense', 'densely', 'rnn',
+                 'seq2seq', 'siamese']
     assert net_type in net_types
 
     if not path or not os.path.exists(path):
         if net_type == 'autoencoder':
             model = autoencoder.build(*args, **kwargs)
+        elif net_type == 'capsule':
+            model = capsule.build(*args, **kwargs)
         elif net_type == 'cnn':
             model = cnn.build(*args, **kwargs)
         elif net_type == 'dense':
@@ -54,7 +56,13 @@ def get(path, net_type, _log, *args, **kwargs):
     _log.info('Trainable params: {:,}'.format(trainable_count))
     _log.info('Non-trainable params: {:,}'.format(non_trainable_count))
 
-    return model, callbacks.get()
+    if 'callbacks' in kwargs:
+        if kwargs['callbacks']:
+            return model, callbacks.get()
+        else:
+            return model
+    else:
+        return model, callbacks.get()
 
 
 @ingredient.capture

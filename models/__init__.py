@@ -10,6 +10,7 @@ ingredient = Ingredient('models',
 
 from .core import *
 from . import autoencoder
+from . import capsule
 from . import cnn
 from . import dense
 from . import densely

@@ -56,8 +56,13 @@ def build(grayscale, rows, cols, blocks, layers, optimizer, loss_weights=None,
             cols = math.ceil(cols / layers['strides'][1])
 
     # outputs
-    outs, loss, metrics = outputs(x, rows=int(rows), cols=int(cols),
-                                  shortcuts=shortcuts)
+    if 'outputs' in kwargs:
+        outs, loss, metrics = outputs(x, rows=int(rows), cols=int(cols),
+                                      shortcuts=shortcuts,
+                                      outputs=kwargs['outputs'])
+    else:
+        outs, loss, metrics = outputs(x, rows=int(rows), cols=int(cols),
+                                      shortcuts=shortcuts)
 
     # Model
     model = Model(inputs=inputs, outputs=outs,
