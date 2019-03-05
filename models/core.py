@@ -24,6 +24,11 @@ def get(path, net_type, _log, *args, **kwargs):
                  'seq2seq', 'siamese']
     assert net_type in net_types
 
+    if 'callbacks' in kwargs:
+        return_callbacks = kwargs.pop('callbacks')
+    else:
+        return_callbacks = True
+
     if not path or not os.path.exists(path):
         if net_type == 'autoencoder':
             model = autoencoder.build(*args, **kwargs)
@@ -56,13 +61,10 @@ def get(path, net_type, _log, *args, **kwargs):
     _log.info('Trainable params: {:,}'.format(trainable_count))
     _log.info('Non-trainable params: {:,}'.format(non_trainable_count))
 
-    if 'callbacks' in kwargs:
-        if kwargs['callbacks']:
-            return model, callbacks.get()
-        else:
-            return model
-    else:
+    if return_callbacks:
         return model, callbacks.get()
+    else:
+        return model
 
 
 @ingredient.capture
@@ -145,6 +147,6 @@ def make_function(model, input_layers, output_layers, _log):
 def plot(model=None, name='model', _log=None, _run=None):
     _log.info('Plot %s' % name)
     if model is None:
-        model = get()
+        model = get(callbacks=False)
     plot_model(model, to_file=os.path.join(_run.observers[0].run_dir,
                                            '%s.png' % name))
