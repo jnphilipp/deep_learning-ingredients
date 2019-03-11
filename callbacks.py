@@ -2,10 +2,9 @@
 
 import os
 
-from sacred import Ingredient
-
+from callbacks import PrintSamplePrediction
 from keras.callbacks import *
-
+from sacred import Ingredient
 
 ingredient = Ingredient('callbacks')
 
@@ -17,7 +16,7 @@ def config():
 
 @ingredient.capture
 def get(earlystopping=None, modelcheckpoint=None, reducelronplateau=None,
-        terminateonnan=True, _log=None, _run=None):
+        printsampleprediction=None, terminateonnan=True, _log=None, _run=None):
     callbacks = []
 
     if terminateonnan:
@@ -41,5 +40,9 @@ def get(earlystopping=None, modelcheckpoint=None, reducelronplateau=None,
     if reducelronplateau is not None:
         _log.info('Add ReduceLROnPlateau callback.')
         callbacks.append(ReduceLROnPlateau(**reducelronplateau))
+
+    if printsampleprediction is not None:
+        _log.info('Add PrintSamplePrediction callback.')
+        callbacks.append(PrintSamplePrediction(**printsampleprediction))
 
     return callbacks
