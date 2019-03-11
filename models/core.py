@@ -62,7 +62,10 @@ def get(path, net_type, _log, *args, **kwargs):
     _log.info('Non-trainable params: {:,}'.format(non_trainable_count))
 
     if return_callbacks:
-        return model, callbacks.get()
+        if 'callbacks_config' in kwargs:
+            return model, callbacks.get(**kwargs['callbacks_config'])
+        else:
+            return model, callbacks.get()
     else:
         return model
 
