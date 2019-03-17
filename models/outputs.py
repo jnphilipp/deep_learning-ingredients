@@ -7,82 +7,83 @@ from . import ingredient
 
 
 @ingredient.capture
-def outputs(vec, blocks, layers, outputs, *args, **kwargs):
+def outputs(vec, layers, outputs, *args, **kwargs):
     output_types = ['class', 'image', 'mask', 'vec']
     assert set([o['t'] for o in outputs]).issubset(output_types)
+
+    if 'batchnorm' in layers:
+        batchnorm = layers['batchnorm']
+        if 'bottleneck2d' in layers:
+            bottleneck_activation = layers['bottleneck2d']['activation']
+            bottleneck2d = dict(bottleneck2d, **{'activation': 'linear'})
+        else:
+            bottleneck2d = None
+    else:
+        batchnorm = None
+        if 'bottleneck2d' in layers:
+            bottleneck2d = layers['bottleneck2d']
+        else:
+            bottleneck2d = None
+    conv2d = layers['conv2d'] if 'conv2d' in layers else {}
+    conv2dt = layers['conv2dt'] if 'conv2dt' in layers else {}
 
     outs = []
     loss = []
     metrics = {}
     for output in outputs:
+        activation = output['activation']
+        name = output['name']
+        nb_classes = output['nb_classes'] if 'nb_classes' in output else 1
+
         loss.append(output['loss'])
         if 'metrics' in output:
             metrics[output['name']] = output['metrics']
 
         if output['t'] == 'class':
-            if 'layer' in output:
-                layer = output['layer']
-            elif 'conv2d_config' in layers:
-                layer = 'conv2d'
-            elif 'dense_config' in layers:
-                layer = 'dense'
-
-            if layer == 'conv2d':
-                x = Conv2D.from_config(dict(layers['conv2d_config'],
-                                       **{'filters': output['nb_classes'],
-                                          'kernel_size': (kwargs['rows'],
-                                                          kwargs['cols']),
-                                          'padding': 'valid'}))(vec)
+            if output['layer'] == 'conv2d':
+                x = Conv2D.from_config(dict(conv2d, **{
+                    'filters': nb_classes,
+                    'kernel_size': (kwargs['rows'], kwargs['cols']),
+                    'padding': 'valid'}))(vec)
                 x = Flatten()(x)
-                outs.append(Activation(output['activation'],
-                                       name=output['name'])(x))
-            elif layer == 'dense':
-                conf = dict(layers['dense_config'],
-                            **{'units': output['nb_classes'],
-                               'activation': output['activation'],
-                               'name': output['name']})
-                outs.append(Dense.from_config(conf)(x))
+                outs.append(Activation(activation, name=name)(x))
+            elif output['layer'] == 'dense':
+                outs.append(Dense.from_config(dict(layers['dense'], **{
+                    'units': nb_classes,
+                    'activation': activation,
+                    'name': name}))(x))
         elif output['t'] == 'image':
-            conf = dict(layers['conv2d_config'],
-                        **{'filters': 1 if output['grayscale'] else 3,
-                           'kernel_size': (1, 1),
-                           'padding': 'same',
-                           'activation': output['activation'],
-                           'name': output['name']})
-            outs.append(Conv2D.from_config(conf)(vec))
+            outs.append(Conv2D.from_config(dict(conv2d, **{
+                'filters': 1 if output['grayscale'] else 3,
+                'kernel_size': (1, 1),
+                'padding': 'same',
+                'activation': activation,
+                'name': name}))(vec))
         elif output['t'] == 'mask':
-            bottleneck2d_config = layers['bottleneck2d_config']
-            bn_config = layers['bn_config'] if 'bn_config' in layers else None
-            conv2d_config = layers['conv2d_config']
             shortcuts = kwargs['shortcuts']
 
             s = vec
-            for i in reversed(range(blocks)):
+            for i in reversed(range(len(shortcuts))):
                 shortcut = shortcuts[i][0]
                 filters = shortcuts[i - 1 if i >= 0 else 0][1]
-                if i is not blocks - 1:
+                if i is not len(shortcuts) - 1:
                     s = concatenate([s, shortcut], axis=layers['concat_axis'])
                 else:
                     s = shortcut
                 if i > 0:
-                    if layers['bottleneck']:
-                        conf = dict(bottleneck2d_config,
-                                    **{'filters': filters})
-                        s = Conv2D.from_config(conf)(s)
-                        if bn_config:
-                            s = BatchNormalization.from_config(bn_config)(s)
-                            s = Activation(layers['activation'])(s)
-                    conf = dict(conv2d_config, **{'strides': layers['strides'],
-                                                  'filters': filters})
-                    s = Conv2DTranspose.from_config(conf)(s)
+                    if bottleneck2d is not None:
+                        s = Conv2D.from_config(dict(bottleneck2d,
+                                                    **{'filters': filters}))(s)
+                        if batchnorm is not None:
+                            s = BatchNormalization.from_config(batchnorm)(s)
+                            s = Activation(bottleneck_activation)(s)
+                    s = Conv2DTranspose.from_config(dict(conv2dt, **{
+                        'filters': filters}))(s)
 
-            filters = output['nb_classes'] if 'nb_classes' in output else 1
-            activation = output['activation'] if 'activation' in output \
-                else 'sigmoid'
-            conf = dict(conv2d_config, **{'filters': filters,
-                                          'name': output['name'],
-                                          'activation': activation})
-            outs.append(Conv2D.from_config(conf)(s))
+            outs.append(Conv2D.from_config(dict(conv2d, **{
+                'filters': nb_classes,
+                'name': name,
+                'activation': activation}))(s))
         elif output['t'] == 'vec':
             outs.append(vec)
 

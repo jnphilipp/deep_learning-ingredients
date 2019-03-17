@@ -13,7 +13,6 @@ from . import autoencoder
 from . import capsule
 from . import cnn
 from . import dense
-from . import densely
 # from . import gan
 from . import rnn
 from . import seq2seq

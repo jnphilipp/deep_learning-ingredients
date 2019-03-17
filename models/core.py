@@ -8,8 +8,8 @@ from keras.models import load_model
 from keras.utils import plot_model
 from keras.utils.layer_utils import count_params
 
-from . import (autoencoder, capsule, cnn, dense, densely, ingredient, rnn,
-               seq2seq, siamese)
+from . import (autoencoder, capsule, cnn, dense, ingredient, rnn, seq2seq,
+               siamese)
 from .. import callbacks
 
 
@@ -20,8 +20,8 @@ def config():
 
 @ingredient.capture
 def get(path, net_type, _log, *args, **kwargs):
-    net_types = ['autoencoder', 'capsule', 'cnn', 'dense', 'densely', 'rnn',
-                 'seq2seq', 'siamese']
+    net_types = ['autoencoder', 'capsule', 'cnn', 'dense', 'rnn', 'seq2seq',
+                 'siamese']
     assert net_type in net_types
 
     if 'callbacks' in kwargs:
@@ -38,8 +38,6 @@ def get(path, net_type, _log, *args, **kwargs):
             model = cnn.build(*args, **kwargs)
         elif net_type == 'dense':
             model = dense.build(*args, **kwargs)
-        elif net_type == 'densely':
-            model = densely.build(*args, **kwargs)
         elif net_type == 'rnn':
             model = rnn.build(*args, **kwargs)
         elif net_type == 'seq2seq':
