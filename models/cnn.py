@@ -12,6 +12,9 @@ from . import ingredient
 from .outputs import outputs
 
 
+DEFAULT_CONCAT_AXIS = 1 if K.image_data_format() == 'channels_first' else -1
+
+
 @ingredient.capture
 def build(grayscale, rows, cols, blocks, layers, optimizer,
           connection_type='base', loss_weights=None, sample_weight_mode=None,
@@ -57,10 +60,11 @@ def build(grayscale, rows, cols, blocks, layers, optimizer,
             else:
                 filters = layers['filters']
 
-        x, cols, rows = block(x, do_pooling=i != blocks - 1, filters=filters,
-                              shortcuts=shortcuts, cols=cols, rows=rows,
-                              nb_filters=nb_filters,
-                              connection_type=connection_type)
+        x, cols, rows, nb_filters = block(x, do_pooling=i != blocks - 1,
+                                          filters=filters, cols=cols,
+                                          nb_filters=nb_filters, rows=rows,
+                                          shortcuts=shortcuts,
+                                          connection_type=connection_type)
 
     # outputs
     if 'outputs' in kwargs:
@@ -119,8 +123,8 @@ def layer(x, batchnorm=None, bottleneck2d=None, conv2d={}, dropout=None,
 @ingredient.capture(prefix='layers')
 def block(inputs, N, cols, rows, connection_type='base', do_pooling=True,
           batchnorm=None, bottleneck2d=None, conv2d={}, pooling={},
-          concat_axis=1 if K.image_data_format() == 'channels_first' else -1,
-          dropout=None, theta=None, filters=None, k=None, *args, **kwargs):
+          concat_axis=DEFAULT_CONCAT_AXIS, dropout=None, theta=None,
+          filters=None, k=None, *args, **kwargs):
     assert connection_type in ['base', 'densely']
     if connection_type == 'densely':
         assert concat_axis is not None
@@ -185,7 +189,7 @@ def block(inputs, N, cols, rows, connection_type='base', do_pooling=True,
 
         rows = math.ceil(rows / pooling['config']['strides'][0])
         cols = math.ceil(cols / pooling['config']['strides'][1])
-    return x, cols, rows
+    return x, cols, rows, nb_filters
 
 
 @ingredient.capture(prefix='layers')

@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 
 from copy import deepcopy
+from keras import backend as K
 from keras.layers import *
 from keras.layers import deserialize as deserialize_layer
 
 from . import ingredient
+
+
+DEFAULT_CONCAT_AXIS = 1 if K.image_data_format() == 'channels_first' else -1
 
 
 @ingredient.capture
@@ -26,9 +30,11 @@ def outputs(vec, layers, outputs, *args, **kwargs):
             bottleneck2d = layers['bottleneck2d']
         else:
             bottleneck2d = None
-    dense = layers['dense'] if 'dense' in layers else {}
+    concat_axis = layers['concat_axis'] if 'concat_axis' in layers else \
+        DEFAULT_CONCAT_AXIS
     conv2d = layers['conv2d'] if 'conv2d' in layers else {}
     conv2dt = layers['conv2dt'] if 'conv2dt' in layers else {}
+    dense = layers['dense'] if 'dense' in layers else {}
 
     outs = []
     loss = []
@@ -70,7 +76,7 @@ def outputs(vec, layers, outputs, *args, **kwargs):
                 shortcut = shortcuts[i][0]
                 filters = shortcuts[i - 1 if i >= 0 else 0][1]
                 if i is not len(shortcuts) - 1:
-                    s = concatenate([s, shortcut], axis=layers['concat_axis'])
+                    s = concatenate([s, shortcut], axis=concat_axis)
                 else:
                     s = shortcut
                 if i > 0:
