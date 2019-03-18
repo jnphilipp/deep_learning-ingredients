@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from copy import deepcopy
 from keras.layers import *
 from keras.layers import deserialize as deserialize_layer
 
@@ -25,6 +26,7 @@ def outputs(vec, layers, outputs, *args, **kwargs):
             bottleneck2d = layers['bottleneck2d']
         else:
             bottleneck2d = None
+    dense = layers['dense'] if 'dense' in layers else {}
     conv2d = layers['conv2d'] if 'conv2d' in layers else {}
     conv2dt = layers['conv2dt'] if 'conv2dt' in layers else {}
 
@@ -49,10 +51,10 @@ def outputs(vec, layers, outputs, *args, **kwargs):
                 x = Flatten()(x)
                 outs.append(Activation(activation, name=name)(x))
             elif output['layer'] == 'dense':
-                outs.append(Dense.from_config(dict(layers['dense'], **{
+                outs.append(Dense.from_config(dict(dense, **{
                     'units': nb_classes,
                     'activation': activation,
-                    'name': name}))(x))
+                    'name': name}))(vec))
         elif output['t'] == 'image':
             outs.append(Conv2D.from_config(dict(conv2d, **{
                 'filters': 1 if output['grayscale'] else 3,

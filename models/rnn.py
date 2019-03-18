@@ -8,61 +8,42 @@ from keras.models import Model
 from keras.optimizers import deserialize as deserialize_optimizers
 
 from . import ingredient
+from .outputs import outputs
 
 
 @ingredient.capture
-def build(vocab_size, N, layers, outputs, optimizer, _log, loss_weights=None,
+def build(vocab_size, N, layers, optimizer, loss_weights=None,
           sample_weight_mode=None, weighted_metrics=None, target_tensors=None,
-          *args, **kwargs):
+          _log=None, *args, **kwargs):
     if 'name' in kwargs:
-        _log.info('Build RNN model [%s]' % kwargs['name'])
+        name = kwargs['name']
+        _log.info(f'Build RNN model [{name}]')
     else:
+        name = 'rnn'
         _log.info('Build RNN model')
 
     inputs = Input(shape=(None,), name='input')
-    x = Embedding.from_config(dict(layers['embedding_config'],
+    x = Embedding.from_config(dict(layers['embedding'],
                                    **{'input_dim': vocab_size}))(inputs)
     if layers['embedding_dropout']:
         x = deserialize_layer(layers['embedding_dropout'])(x)
 
     for i in range(N):
-        layer = deepcopy(layers['recurrent_config'])
+        rnn_layer = deepcopy(layers['recurrent'])
         if i != N - 1:
-            layer['config']['return_sequences'] = True
+            rnn_layer['config']['return_sequences'] = True
 
-        if 'bidirectional_config' in layers and layers['bidirectional_config']:
-            conf = dict(layers['bidirectional_config'],
-                        **{'layer': layer})
+        if 'bidirectional' in layers and layers['bidirectional']:
+            conf = dict(layers['bidirectional'], **{'layer': rnn_layer})
             x = Bidirectional.from_config(conf)(x)
         else:
-            x = deserialize_layer(layer)(x)
+            x = deserialize_layer(rnn_layer)(x)
 
     # outputs
-    output_types = ['class', 'vec']
-    assert set([o['t'] for o in outputs]).issubset(output_types)
-
-    outs = []
-    loss = []
-    metrics = {}
-    for output in outputs:
-        loss.append(output['loss'])
-        if 'metrics' in output:
-            metrics[output['name']] = output['metrics']
-
-        if output['t'] == 'class':
-            nb_classes = output['nb_classes']
-            layer = deepcopy(layers[output['layer']])
-            layer['config'][nb_classes['k']] = nb_classes['v']
-            layer['config']['name'] = output['name']
-            if 'activation' in output:
-                layer['config']['activation'] = output['activation']
-            outs.append(deserialize_layer(layer)(x))
-        elif output['t'] == 'vec':
-            outs.append(x)
+    outs, loss, metrics = outputs(x)
 
     # Model
-    model = Model(inputs=inputs, outputs=outs,
-                  name=kwargs['name'] if 'name' in kwargs else 'rnn')
+    model = Model(inputs=inputs, outputs=outs, name=name)
     model.compile(loss=loss, optimizer=deserialize_optimizers(optimizer),
                   metrics=metrics, loss_weights=loss_weights,
                   sample_weight_mode=sample_weight_mode,
