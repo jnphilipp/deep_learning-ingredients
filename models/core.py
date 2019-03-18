@@ -8,8 +8,7 @@ from keras.models import load_model
 from keras.utils import plot_model
 from keras.utils.layer_utils import count_params
 
-from . import (autoencoder, capsule, cnn, dense, ingredient, rnn, seq2seq,
-               siamese)
+from . import autoencoder, cnn, dense, ingredient, rnn, seq2seq, siamese
 from .. import callbacks
 
 
@@ -32,8 +31,6 @@ def get(path, net_type, _log, *args, **kwargs):
     if not path or not os.path.exists(path):
         if net_type == 'autoencoder':
             model = autoencoder.build(*args, **kwargs)
-        elif net_type == 'capsule':
-            model = capsule.build(*args, **kwargs)
         elif net_type == 'cnn':
             model = cnn.build(*args, **kwargs)
         elif net_type == 'dense':
