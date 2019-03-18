@@ -15,7 +15,8 @@ def outputs(vec, layers, outputs, *args, **kwargs):
         batchnorm = layers['batchnorm']
         if 'bottleneck2d' in layers:
             bottleneck_activation = layers['bottleneck2d']['activation']
-            bottleneck2d = dict(bottleneck2d, **{'activation': 'linear'})
+            bottleneck2d = dict(layers['bottleneck2d'],
+                                **{'activation': 'linear'})
         else:
             bottleneck2d = None
     else:
