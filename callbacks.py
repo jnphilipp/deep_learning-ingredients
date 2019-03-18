@@ -2,7 +2,7 @@
 
 import os
 
-from callbacks import PrintSamplePrediction
+from callbacks import PrintSamplePrediction, WeightsLogging
 from keras.callbacks import *
 from sacred import Ingredient
 
@@ -16,12 +16,18 @@ def config():
 
 @ingredient.capture
 def get(earlystopping=None, modelcheckpoint=None, reducelronplateau=None,
-        printsampleprediction=None, terminateonnan=True, _log=None, _run=None):
+        printsampleprediction=None, terminateonnan=True,
+        weightslogging={'mode': 'epochs'}, _log=None, _run=None):
     callbacks = []
 
     if terminateonnan:
         _log.info('Add TerminateOnNaN callback.')
         callbacks.append(TerminateOnNaN())
+
+    if weightslogging is not None:
+        _log.info('Add WeightsLogging callback.')
+        path = os.path.join(_run.observers[0].run_dir, 'weights_history.json')
+        callbacks.append(WeightsLogging(path=path, **weightslogging))
 
     if modelcheckpoint is not None:
         _log.info('Add ModelCheckpoint callback.')
