@@ -75,8 +75,8 @@ def split(X, y=None, validation_split=0.25, _log=None, *args, **kwargs):
     else:
         validation_samples = math.floor(len(X) * validation_split)
 
-        X_train = X[len(X) - validation_samples:]
-        X_val = X[:validation_samples * -1]
+        X_train = X[:validation_samples * -1]
+        X_val = X[len(X) - validation_samples:]
 
         _log.info('Train on %d samples, validate on %d samples.' %
                   (len(X_train), len(X_val)))
