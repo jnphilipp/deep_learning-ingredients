@@ -122,9 +122,9 @@ def layer(x, batchnorm=None, bottleneck2d=None, conv2d={}, dropout=None,
 
 @ingredient.capture(prefix='layers')
 def block(inputs, N, cols, rows, connection_type='base', do_pooling=True,
-          batchnorm=None, bottleneck2d=None, conv2d={}, pooling={},
-          concat_axis=DEFAULT_CONCAT_AXIS, dropout=None, theta=None,
-          filters=None, k=None, *args, **kwargs):
+          attention2d=None, batchnorm=None, bottleneck2d=None, conv2d={},
+          pooling={}, concat_axis=DEFAULT_CONCAT_AXIS, dropout=None,
+          theta=None, filters=None, k=None, *args, **kwargs):
     assert connection_type in ['base', 'densely']
     if connection_type == 'densely':
         assert concat_axis is not None
@@ -143,6 +143,13 @@ def block(inputs, N, cols, rows, connection_type='base', do_pooling=True,
 
     if 'shortcuts' in kwargs:
         kwargs['shortcuts'].append((x, nb_filters))
+
+    if attention2d is not None:
+        w = Conv2D.from_config(dict(attention2d, **{'filters': nb_filters}))(x)
+        w = Flatten()(w)
+        w = Activation('softmax')(w)
+        w = Reshape(x._keras_shape[1:])(w)
+        x = multiply([x, w])
 
     if do_pooling:
         if theta is not None:
@@ -193,9 +200,9 @@ def block(inputs, N, cols, rows, connection_type='base', do_pooling=True,
 
 
 @ingredient.capture(prefix='layers')
-def upblock(inputs, N, cols, rows, batchnorm=None, bottleneck2d=None,
-            conv2d={}, conv2dt={}, dropout=None, do_transpose=True,
-            concat_axis=1 if K.image_data_format() == 'channels_first' else -1,
+def upblock(inputs, N, cols, rows, attention2d=None, batchnorm=None,
+            bottleneck2d=None, conv2d={}, conv2dt={}, dropout=None,
+            do_transpose=True, concat_axis=DEFAULT_CONCAT_AXIS,
             theta=None, filters=None, k=None, *args, **kwargs):
     assert connection_type in ['base', 'densely']
     if connection_type == 'densely':
@@ -212,6 +219,13 @@ def upblock(inputs, N, cols, rows, batchnorm=None, bottleneck2d=None,
         elif connection_type == 'densely':
             convs.append(layer(inputs if j == 0 else x))
             x = concatenate([inputs] + convs, axis=concat_axis)
+
+    if attention2d is not None:
+        w = Conv2D.from_config(dict(attention2d, **{'filters': nb_filters}))(x)
+        w = Flatten()(w)
+        w = Activation('softmax')(w)
+        w = Reshape(x._keras_shape[1:])(w)
+        x = multiply([x, w])
 
     if do_transpose:
         if theta is not None:
