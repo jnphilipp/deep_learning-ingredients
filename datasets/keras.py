@@ -34,3 +34,17 @@ def mnist(_log):
     _log.info('%s validation samples.' % X_val.shape[0])
 
     return X, y, validation_data, input_shape, nb_classes
+
+
+@ingredient.capture
+def cifar10(_log):
+    _log.info('Loading CIFAR10.')
+
+    (X, y), (X_val, y_val) = datasets.cifar10.load_data()
+    y = to_categorical(y, 10)
+    y_val = to_categorical(y_val, 10)
+
+    _log.info(f'{X.shape[0]} train samples.')
+    _log.info(f'{X_val.shape[0]} validation samples.')
+
+    return X, y, X_val, y_val
