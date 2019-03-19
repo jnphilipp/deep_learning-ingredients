@@ -19,8 +19,7 @@ def config():
 
 @ingredient.capture
 def get(path, net_type, _log, *args, **kwargs):
-    net_types = ['autoencoder', 'capsule', 'cnn', 'dense', 'rnn', 'seq2seq',
-                 'siamese']
+    net_types = ['autoencoder', 'cnn', 'dense', 'rnn', 'seq2seq', 'siamese']
     assert net_type in net_types
 
     if 'callbacks' in kwargs:
@@ -51,10 +50,9 @@ def get(path, net_type, _log, *args, **kwargs):
         trainable_count = count_params(model.trainable_weights)
     non_trainable_count = count_params(model.non_trainable_weights)
 
-    _log.info('Total params: {:,}'.format(trainable_count +
-                                          non_trainable_count))
-    _log.info('Trainable params: {:,}'.format(trainable_count))
-    _log.info('Non-trainable params: {:,}'.format(non_trainable_count))
+    _log.info(f'Total params: {trainable_count + non_trainable_count:,}')
+    _log.info(f'Trainable params: {trainable_count:,}')
+    _log.info(f'Non-trainable params: {non_trainable_count:,}')
 
     if return_callbacks:
         if 'callbacks_config' in kwargs:
@@ -70,36 +68,33 @@ def load(path, _log):
     if path is None:
         _log.critical('No path given to load model.')
     elif isinstance(path, str):
-        _log.info('Load model [%s]' % path)
+        _log.info(f'Load model [{path}]')
         return load_model(path)
     else:
         models = []
-        _log.info('Load model [%s]' % ', '.join(path))
+        _log.info(f'Load model [{", ".join(path)}]')
         for p in path:
             models.append(load_model(p))
         return models
 
 
 @ingredient.capture
-def save(model, name=None, _log=None, _run=None):
-    _log.info('Save model [%s]' % name if name else 'Save model')
+def save(model, name='model', _log=None, _run=None):
+    _log.info(f'Save model [{name}]')
 
-    path = os.path.join(_run.observers[0].run_dir,
-                        '%s.json' % (name if name else 'model'))
+    path = os.path.join(_run.observers[0].run_dir, f'{name}.json')
     with open(path, 'w', encoding='utf8') as f:
         f.write(model.to_json())
         f.write('\n')
 
-    path = os.path.join(_run.observers[0].run_dir,
-                        '%ssummary' % ('%s_' % name if name else ''))
+    path = os.path.join(_run.observers[0].run_dir, f'{name}_summary')
     stdout = sys.stdout
     with open(path, 'w', encoding='utf8') as f:
         sys.stdout = f
         model.summary()
     sys.stdout = stdout
 
-    model.save(os.path.join(_run.observers[0].run_dir,
-                            '%s.h5' % (name if name else 'model')))
+    model.save(os.path.join(_run.observers[0].run_dir, f'{name}.h5'))
 
 
 @ingredient.capture
@@ -143,8 +138,9 @@ def make_function(model, input_layers, output_layers, _log):
 
 @ingredient.command
 def plot(model=None, name='model', _log=None, _run=None):
-    _log.info('Plot %s' % name)
+    _log.info(f'Plot {name}')
     if model is None:
         model = get(callbacks=False)
+    model.summary()
     plot_model(model, to_file=os.path.join(_run.observers[0].run_dir,
-                                           '%s.png' % name))
+                                           f'{name}.png'))
