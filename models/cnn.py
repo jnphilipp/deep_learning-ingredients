@@ -145,10 +145,11 @@ def block(inputs, N, cols, rows, connection_type='base', do_pooling=True,
         kwargs['shortcuts'].append((x, nb_filters))
 
     if attention2d is not None:
-        w = Conv2D.from_config(dict(attention2d, **{'filters': nb_filters}))(x)
+        w = Conv2D.from_config(dict(attention2d, **{'filters': 1}))(x)
+        w_shape = w._keras_shape[1:]
         w = Flatten()(w)
         w = Activation('softmax')(w)
-        w = Reshape(x._keras_shape[1:])(w)
+        w = Reshape(w_shape)(w)
         x = multiply([x, w])
 
     if do_pooling:
