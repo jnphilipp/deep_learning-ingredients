@@ -7,8 +7,13 @@ from . import ingredient
 
 
 @ingredient.capture
-def mnist(_log):
+def mnist(data_format=None, _log=None):
     _log.info('Loading MNIST.')
+
+    if data_format is None:
+        data_format = K.image_data_format()
+    if data_format not in {'channels_first', 'channels_last'}:
+        raise ValueError('Unknown data_format:', data_format)
 
     nb_classes = 10
     rows, cols = 28, 28
@@ -17,23 +22,22 @@ def mnist(_log):
     y = to_categorical(y, nb_classes)
     y_val = to_categorical(y_val, nb_classes)
 
-    if K.image_data_format() == 'channels_first':
+    if data_format == 'channels_first':
         X = X.reshape(X.shape[0], 1, rows, cols)
         X_val = X_val.reshape(X_val.shape[0], 1, rows, cols)
         input_shape = (1, rows, cols)
-    else:
+    elif data_format == 'channels_last':
         X = X.reshape(X.shape[0], rows, cols, 1)
         X_val = X_val.reshape(X_val.shape[0], rows, cols, 1)
         input_shape = (rows, cols, 1)
 
     X = X.astype('float32')
     X_val = X_val.astype('float32')
-    validation_data = (X_val, y_val)
 
-    _log.info('%s train samples.' % X.shape[0])
-    _log.info('%s validation samples.' % X_val.shape[0])
+    _log.info(f'{X.shape[0]} train samples.')
+    _log.info(f'{X_val.shape[0]} validation samples.')
 
-    return X, y, validation_data, input_shape, nb_classes
+    return X, y, X_val, y_val
 
 
 @ingredient.capture
