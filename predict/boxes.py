@@ -8,7 +8,7 @@ from datetime import datetime
 from decorators import runtime
 from ingredients import models
 from ingredients.datasets.h5py import save
-from ingredients.datasets.images import load_img
+from ingredients.datasets.images import load
 from keras import backend as K
 from keras.callbacks import BaseLogger, CallbackList, History, ProgbarLogger
 from keras.preprocessing.image import array_to_img
@@ -58,7 +58,8 @@ def boxes(images, threshold, rescale, output=None, output_class=None,
 
                     if nb_classes != 1:
                         raise RuntimeError('The output has more than one ' +
-                                           'class. Need to set "output_class".')
+                                           'class. Need to set ' +
+                                           '"output_class".')
 
     base_dir = os.path.join(_run.observers[0].run_dir, 'boxes')
     os.makedirs(base_dir, exist_ok=True)
@@ -67,11 +68,11 @@ def boxes(images, threshold, rescale, output=None, output_class=None,
     os.makedirs(page_dir, exist_ok=True)
 
     pages = []
-    for img in images:
-        name, ext = os.path.splitext(os.path.basename(img))
-        _log.info('Image: "%s"' % name)
+    for image in images:
+        name, ext = os.path.splitext(os.path.basename(image))
+        _log.info(f'Image: {name}')
 
-        history, outputs = func(model, img)
+        history, outputs = func(model, image)
 
         if output is None:
             if data_format == 'channels_first':
@@ -95,14 +96,15 @@ def boxes(images, threshold, rescale, output=None, output_class=None,
                         c = outputs[0]['img'].shape[2]
                     break
 
-        boxes = generate_boxes(p)
         if data_format == 'channels_first':
-            p = np.repeat(p.reshape((1,) + p.shape), 3, axis=0)
+            o = np.repeat(p.reshape((1,) + p.shape), 3, axis=0)
         elif data_format == 'channels_last':
-            p = np.repeat(p.reshape(p.shape + (1,)), 3, axis=2)
-        p *= load_img(img, False, rescale)
-        array_to_img(p).save(os.path.join(base_dir, os.path.basename(img)))
-        pages.append(page_xml(page_dir, os.path.basename(img), c, r, boxes))
+            o = np.repeat(p.reshape(p.shape + (1,)), 3, axis=2)
+        o *= load(image, False, rescale)
+        array_to_img(o * 255, scale=False).save(
+            os.path.join(base_dir, os.path.basename(image)))
+        boxes = generate_boxes(p)
+        pages.append(page_xml(page_dir, os.path.basename(image), c, r, boxes))
     mets_xml(base_dir, pages)
 
 
@@ -114,6 +116,12 @@ def generate_boxes(p, threshold, pixel_distance=9, _log=None):
                 if i == 0 and j == 0:
                     continue
                 yield (point[0] + i, point[1] + j)
+
+    def same(p1, p2):
+        return (p1[0] - pixel_distance > p2[1] + pixel_distance or
+                p1[1] + pixel_distance < p2[0] - pixel_distance) or \
+            (p1[2] - pixel_distance > p2[3] + pixel_distance or
+             p1[3] + pixel_distance < p2[2] - pixel_distance)
 
     _log.info('Calculating bounding boxes...')
 
@@ -130,22 +138,22 @@ def generate_boxes(p, threshold, pixel_distance=9, _log=None):
             else:
                 current_box = None
 
-    i = 0
-    while i < len(boxes):
-        j = i + 1
-        while j < len(boxes):
-            for point in boxes[j]:
-                merged = False
-                for o in surrounding_points(point):
-                    if o in boxes[i]:
-                        boxes[i] += boxes[j]
-                        del boxes[j]
-                        merged = True
-                        break
-                if merged:
-                    break
-            j += 1
-        i += 1
+    # i = 0
+    # while i < len(boxes):
+    #     j = i + 1
+    #     while j < len(boxes):
+    #         for point in boxes[j]:
+    #             merged = False
+    #             for o in surrounding_points(point):
+    #                 if o in boxes[i]:
+    #                     boxes[i] += boxes[j]
+    #                     del boxes[j]
+    #                     merged = True
+    #                     break
+    #             if merged:
+    #                 break
+    #         j += 1
+    #     i += 1
 
     for i in range(len(boxes)):
         min_x = None
@@ -169,17 +177,15 @@ def generate_boxes(p, threshold, pixel_distance=9, _log=None):
     while i < len(boxes):
         j = i + 1
         while j < len(boxes):
-            if (boxes[i][0] > boxes[j][1] or boxes[i][1] < boxes[j][0]) or \
-                    (boxes[i][2] > boxes[j][3] or boxes[i][3] < boxes[j][2]):
+            if same(boxes[i], boxes[j][1]):
                 j += 1
-                continue
-
-            boxes[i] = [min(boxes[i][0], boxes[j][0]),
-                        max(boxes[i][1], boxes[j][1]),
-                        min(boxes[i][2], boxes[j][2]),
-                        max(boxes[i][3], boxes[j][3])]
-            del boxes[j]
-            j = i + 1
+            else:
+                boxes[i] = [min(boxes[i][0], boxes[j][0]),
+                            max(boxes[i][1], boxes[j][1]),
+                            min(boxes[i][2], boxes[j][2]),
+                            max(boxes[i][3], boxes[j][3])]
+                del boxes[j]
+                j = i + 1
         boxes[i] = [(boxes[i][0], boxes[i][2]), (boxes[i][0], boxes[i][3]),
                     (boxes[i][1], boxes[i][3]), (boxes[i][1], boxes[i][2])]
         i += 1
@@ -193,7 +199,7 @@ def page_xml(page_dir, name, width, height, boxes, _log, _run):
 
     page = {
         'name': name,
-        'created': '%s+00:00' % datetime.utcnow().isoformat(timespec='seconds'),
+        'created': f'{datetime.utcnow().isoformat(timespec='seconds')}+00:00',
     }
 
     attr_qname = ET.QName('http://www.w3.org/2001/XMLSchema-instance',
@@ -213,11 +219,11 @@ def page_xml(page_dir, name, width, height, boxes, _log, _run):
     pcgts.append(metadata)
 
     creator = ET.Element('Creator')
-    creator.text = '%s[%s]' % (_run.experiment_info['name'], _run._id)
+    creator.text = f'{_run.experiment_info['name']}[{_run._id}]'
     metadata.append(creator)
 
     created = ET.Element('Created')
-    created.text =  page['created']
+    created.text = page['created']
     metadata.append(created)
 
     attrib = {'imageFilename': page['name'], 'imageWidth': str(width),
@@ -226,17 +232,17 @@ def page_xml(page_dir, name, width, height, boxes, _log, _run):
     pcgts.append(epage)
 
     for i in range(len(boxes)):
-        text_region = ET.Element('TextRegion', {'id': 'r%d' % i})
+        text_region = ET.Element('TextRegion', {'id': f'r{i:d}'})
         epage.append(text_region)
 
-        points = ' '.join(['%d,%d' % (p[1], p[0]) for p in boxes[i]])
+        points = ' '.join([f'{p[1]:d},{p[0]:d}' for p in boxes[i]])
         coords = ET.Element('Coords', {'points': points})
         text_region.append(coords)
 
     name, ext = os.path.splitext(page['name'])
     page['xml'] = 'page/%s.xml' % name
     page['ext'] = ext
-    with open(os.path.join(page_dir, '%s.xml' % name), 'bw') as f:
+    with open(os.path.join(page_dir, f'{name}.xml'), 'bw') as f:
         f.write(ET.tostring(pcgts, pretty_print=True, xml_declaration=True,
                             encoding='UTF-8', standalone=True))
 
@@ -252,8 +258,8 @@ def mets_xml(base_dir, pages, _log, _run):
     attrib = {
         attr_qname: 'http://www.loc.gov/METS/ http://www.loc.gov/standards/' +
                     'mets/mets.xsd',
-        'LABEL': '%s[%s]' % (_run.experiment_info['name'], _run._id),
-        'PROFILE': '%s[%s]' % (_run.experiment_info['name'], _run._id)
+        'LABEL': f'{_run.experiment_info['name']}[{_run._id}]',
+        'PROFILE': f'{_run.experiment_info['name']}[{_run._id}]'
     }
     nsmap = {
         'xsi': 'http://www.w3.org/2001/XMLSchema-instance',
@@ -274,7 +280,7 @@ def mets_xml(base_dir, pages, _log, _run):
     metshdr.append(agent)
 
     name = ET.Element('{http://www.loc.gov/METS/}name')
-    name.text = '%s[%s]' % (_run.experiment_info['name'], _run._id)
+    name.text = f'{_run.experiment_info['name']}[{_run._id}]'
     agent.append(name)
 
     amdsec = ET.Element('{http://www.loc.gov/METS/}amdSec', {'ID': 'SOURCE'})
@@ -285,7 +291,7 @@ def mets_xml(base_dir, pages, _log, _run):
     amdsec.append(sourcemd)
 
     mdwrap = ET.Element('{http://www.loc.gov/METS/}mdWrap',
-                          {'ID': 'TRP_DOC_MD', 'MDTYPE': 'OTHER'})
+                        {'ID': 'TRP_DOC_MD', 'MDTYPE': 'OTHER'})
     sourcemd.append(mdwrap)
 
     xmldata = ET.Element('{http://www.loc.gov/METS/}xmlData')
@@ -295,7 +301,7 @@ def mets_xml(base_dir, pages, _log, _run):
     xmldata.append(trpdocmetadata)
 
     title = ET.Element('title')
-    title.text = '%s[%s]' % (_run.experiment_info['name'], _run._id)
+    title.text = f'{_run.experiment_info['name']}[{_run._id}]'
     trpdocmetadata.append(title)
 
     nrofpages = ET.Element('nrOfPages')
@@ -320,9 +326,9 @@ def mets_xml(base_dir, pages, _log, _run):
 
     for i, page in enumerate(pages):
         attrib = {
-            'ID': 'IMG_%d' % i,
+            'ID': f'IMG_{i:d}',
             'SEQ': str(i),
-            'MIMETYPE': 'image/%s' % page['ext'],
+            'MIMETYPE': f'image/{page["ext"]}',
             'CREATED': page['created']
         }
         file = ET.Element('{http://www.loc.gov/METS/}file', attrib)
@@ -338,7 +344,7 @@ def mets_xml(base_dir, pages, _log, _run):
         file.append(FLocat)
 
         attrib = {
-            'ID': 'PAGEXML_%d' % i,
+            'ID': f'PAGEXML_{i:d}',
             'SEQ': str(i),
             'MIMETYPE': 'application/xml',
             'CREATED': page['created'],
@@ -373,7 +379,7 @@ def mets_xml(base_dir, pages, _log, _run):
 
     for i, page in enumerate(pages):
         attrib = {
-            'ID': 'PAGE_%d' % i,
+            'ID': f'PAGE_{i:d}',
             'ORDER': str(i),
             'TYPE': 'SINGLE_PAGE'
         }
@@ -383,14 +389,14 @@ def mets_xml(base_dir, pages, _log, _run):
         ifptr = ET.Element('{http://www.loc.gov/METS/}fptr')
         pdiv.append(ifptr)
 
-        attrib = {'FILEID': 'IMG_%d' % i}
+        attrib = {'FILEID': f'IMG_{i:d}'}
         iarea = ET.Element('{http://www.loc.gov/METS/}area', attrib)
         ifptr.append(iarea)
 
         xmlfptr = ET.Element('{http://www.loc.gov/METS/}fptr')
         pdiv.append(xmlfptr)
 
-        attrib = {'FILEID': 'PAGEXML_%d' % i}
+        attrib = {'FILEID': f'PAGEXML_{i:d}'}
         xmlarea = ET.Element('{http://www.loc.gov/METS/}area', attrib)
         xmlfptr.append(xmlarea)
 
