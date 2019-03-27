@@ -10,7 +10,7 @@ from keras.utils import np_utils
 from scipy import ndimage
 
 
-from .. import ingredient
+from . import ingredient
 
 
 @ingredient.capture
@@ -33,7 +33,7 @@ def from_directory(DATASETS_DIR, dataset, which_set,
     _log.info(f'Loading images [{dataset}: {which_set}].')
     dataset_path = os.path.join(DATASETS_DIR, dataset, which_set)
     mask_ext = tuple(f'.mask.{e}' for e in ((ext,)
-                           if isinstance(ext, str) else ext))
+                                            if isinstance(ext, str) else ext))
 
     X = []
     y = {'p': [], 'mask': []}
