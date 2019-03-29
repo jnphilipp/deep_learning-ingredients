@@ -199,7 +199,7 @@ def page_xml(page_dir, name, width, height, boxes, _log, _run):
 
     page = {
         'name': name,
-        'created': f'{datetime.utcnow().isoformat(timespec='seconds')}+00:00',
+        'created': f'{datetime.utcnow().isoformat(timespec="seconds")}+00:00',
     }
 
     attr_qname = ET.QName('http://www.w3.org/2001/XMLSchema-instance',
