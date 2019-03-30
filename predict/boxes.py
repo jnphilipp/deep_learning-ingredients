@@ -219,7 +219,7 @@ def page_xml(page_dir, name, width, height, boxes, _log, _run):
     pcgts.append(metadata)
 
     creator = ET.Element('Creator')
-    creator.text = f'{_run.experiment_info['name']}[{_run._id}]'
+    creator.text = f'{_run.experiment_info["name"]}[{_run._id}]'
     metadata.append(creator)
 
     created = ET.Element('Created')
@@ -258,8 +258,8 @@ def mets_xml(base_dir, pages, _log, _run):
     attrib = {
         attr_qname: 'http://www.loc.gov/METS/ http://www.loc.gov/standards/' +
                     'mets/mets.xsd',
-        'LABEL': f'{_run.experiment_info['name']}[{_run._id}]',
-        'PROFILE': f'{_run.experiment_info['name']}[{_run._id}]'
+        'LABEL': f'{_run.experiment_info["name"]}[{_run._id}]',
+        'PROFILE': f'{_run.experiment_info["name"]}[{_run._id}]'
     }
     nsmap = {
         'xsi': 'http://www.w3.org/2001/XMLSchema-instance',
@@ -280,7 +280,7 @@ def mets_xml(base_dir, pages, _log, _run):
     metshdr.append(agent)
 
     name = ET.Element('{http://www.loc.gov/METS/}name')
-    name.text = f'{_run.experiment_info['name']}[{_run._id}]'
+    name.text = f'{_run.experiment_info["name"]}[{_run._id}]'
     agent.append(name)
 
     amdsec = ET.Element('{http://www.loc.gov/METS/}amdSec', {'ID': 'SOURCE'})
@@ -301,7 +301,7 @@ def mets_xml(base_dir, pages, _log, _run):
     xmldata.append(trpdocmetadata)
 
     title = ET.Element('title')
-    title.text = f'{_run.experiment_info['name']}[{_run._id}]'
+    title.text = f'{_run.experiment_info["name"]}[{_run._id}]'
     trpdocmetadata.append(title)
 
     nrofpages = ET.Element('nrOfPages')
