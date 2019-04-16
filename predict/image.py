@@ -182,7 +182,7 @@ def func(model, image_path, batch_size, overlap, rescale, data_format=None):
                     cur_img_shape = outputs[i]['img'][:, top:bottom,
                                                       left:right].shape
                     cur_p_shape = outputs[i]['p'][:, j, k].shape
-                    if cur_p_shape != (1,) and cur_img_shape != cur_p_shape:
+                    if len(cur_p_shape) != 1 and cur_img_shape != cur_p_shape:
                         repeat1 = math.floor(cur_img_shape[1] / cur_p_shape[1])
                         repeat2 = math.floor(cur_img_shape[2] / cur_p_shape[2])
                         outputs[i]['img'][:, top:bottom, left:right] += \
@@ -196,7 +196,7 @@ def func(model, image_path, batch_size, overlap, rescale, data_format=None):
                     cur_img_shape = outputs[i]['img'][top:bottom, left:right,
                                                       :].shape
                     cur_p_shape = outputs[i]['p'][j, k, :].shape
-                    if cur_p_shape != (1,) and cur_img_shape != cur_p_shape:
+                    if len(cur_p_shape) != 1 and cur_img_shape != cur_p_shape:
                         repeat0 = math.floor(cur_img_shape[0] / cur_p_shape[0])
                         repeat1 = math.floor(cur_img_shape[1] / cur_p_shape[1])
                         outputs[i]['img'][top:bottom, left:right, :] += \
