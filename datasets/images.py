@@ -30,6 +30,17 @@ def load(path, color_mode='rgb', target_size=None, interpolation='nearest',
 def from_directory(DATASETS_DIR, dataset, which_set,
                    ext=('jpg', 'jpeg', 'bmp', 'png', 'ppm', 'tif', 'tiff'),
                    _log=None):
+    def load_images(path):
+        for img in image.list_pictures(path, ext):
+            if img.lower().endswith(mask_ext):
+                continue
+            X.append(load(img))
+            y['p'].append(num_classes)
+
+            mask_img = re.sub(rf'.({"|".join(ext)})$', r'.mask\g<0>', img)
+            if os.path.exists(mask_img):
+                y['mask'].append(load(mask_img, 'grayscale'))
+
     _log.info(f'Loading images [{dataset}: {which_set}].')
     dataset_path = os.path.join(DATASETS_DIR, dataset, which_set)
     mask_ext = tuple(f'.mask.{e}' for e in ((ext,)
@@ -40,26 +51,24 @@ def from_directory(DATASETS_DIR, dataset, which_set,
     num_classes = 0
     for e in sorted(os.scandir(dataset_path), key=lambda e: e.name):
         if e.is_dir():
-            for img in image.list_pictures(e.path, ext):
-                if img.lower().endswith(mask_ext):
-                    continue
-                X.append(load(img))
-                y['p'].append(num_classes)
-
-                mask_img = re.sub(rf'.({"|".join(ext)})$', r'.mask\g<0>', img)
-                if os.path.exists(mask_img):
-                    y['mask'].append(load(mask_img))
-
+            load_images(e.path)
             num_classes += 1
+    if num_classes == 0 and len(X) == 0:
+        load_images(dataset_path)
 
     samples = len(X)
-    y['p'] = np_utils.to_categorical(np.asarray(y['p']), num_classes)
     _log.info(f'Found {samples} images belonging to {num_classes} classes.')
 
-    if len(y['mask']) != samples:
-        y = y['p']
+    if num_classes > 0:
+        y['p'] = np_utils.to_categorical(np.asarray(y['p']), num_classes)
 
-    return X, y
+    if len(y['mask']) != samples:
+        del y['mask']
+
+    if num_classes == 0 and 'mask' not in y:
+        return X
+    else:
+        return X, y
 
 
 @ingredient.capture
