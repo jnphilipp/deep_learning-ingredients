@@ -137,6 +137,14 @@ def make_function(model, input_layers, output_layers, _log):
 
 
 @ingredient.command
+def summary(model=None, _log=None):
+    _log.info(f'Model summary')
+    if model is None:
+        model = get(callbacks=False)
+    model.summary()
+
+
+@ingredient.command
 def plot(model=None, name='model', _log=None, _run=None):
     _log.info(f'Plot {name}')
     if model is None:
