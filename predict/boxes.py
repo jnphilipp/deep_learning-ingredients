@@ -100,7 +100,7 @@ def boxes(images, threshold, rescale, output=None, output_class=None,
             o = np.repeat(p.reshape((1,) + p.shape), 3, axis=0)
         elif data_format == 'channels_last':
             o = np.repeat(p.reshape(p.shape + (1,)), 3, axis=2)
-        o *= load(image, False, rescale)
+        o *= load(image, rescale=rescale)
         array_to_img(o * 255, scale=False).save(
             os.path.join(base_dir, os.path.basename(image)))
         boxes = generate_boxes(p)
