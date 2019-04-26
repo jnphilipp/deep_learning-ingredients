@@ -26,7 +26,7 @@ def get(earlystopping=None, modelcheckpoint=None, reducelronplateau=None,
 
     if weightslogging is not None:
         _log.info('Add WeightsLogging callback.')
-        path = os.path.join(_run.observers[0].run_dir, 'weights_history.json')
+        path = os.path.join(_run.observers[0].run_dir, 'weights_history.csv')
         callbacks.append(WeightsLogging(path=path, **weightslogging))
 
     if modelcheckpoint is not None:
