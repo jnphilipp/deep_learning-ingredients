@@ -257,6 +257,7 @@ class LandkartenSequence(Sequence):
             if nb_rest > 0:
                 perm = np.random.permutation(len(self.X))
                 self.index_array += list(perm)[:nb_rest]
+        self.index_array = np.random.permutation(self.index_array)
 
     def __getitem__(self, index):
         assert self.shape is not None
