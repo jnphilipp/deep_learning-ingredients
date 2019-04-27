@@ -132,7 +132,7 @@ class LandkartenSequence(Sequence):
             else:
                 raise ValueError('Missing config value "text_func".')
 
-            self.bg_maps, _ = datasets.images.from_directory(
+            self.bg_maps = datasets.images.from_directory(
                 **bg_maps_from_directory_args)
 
         self.sum_nb_maps = 0
