@@ -52,10 +52,7 @@ def get(sequence_type, batch_size, train_samples=None, validation_samples=None,
         validation_generator = LandkartenSequence(
             validation_samples, batch_size,
             from_directory_args=from_directory_args,
-            image_datagen_args=validation_image_datagen_args,
-            bg_maps_from_directory_args=bg_maps_from_directory_args,
-            artificial_maps_split=artificial_maps_split,
-            artificial_maps_config=artificial_maps_config)
+            image_datagen_args=validation_image_datagen_args)
     elif sequence_type == 'mnist':
         X, y, X_val, y_val = datasets.keras.mnist()
 
