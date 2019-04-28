@@ -61,6 +61,8 @@ def from_directory(DATASETS_DIR, dataset, which_set,
 
     if num_classes > 0:
         y['p'] = np_utils.to_categorical(np.asarray(y['p']), num_classes)
+    else:
+        del y['p']
 
     if len(y['mask']) != samples:
         del y['mask']

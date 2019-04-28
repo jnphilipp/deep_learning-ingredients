@@ -129,7 +129,7 @@ class LandkartenSequence(Sequence):
             else:
                 raise ValueError('Missing config value "text_func".')
 
-            self.bg_maps = datasets.images.from_directory(
+            self.bg_maps, _ = datasets.images.from_directory(
                 **bg_maps_from_directory_args)
 
         self.sum_nb_maps = 0
@@ -266,7 +266,7 @@ class LandkartenSequence(Sequence):
 
         bX = np.zeros((current_batch_size,) + tuple(self.shape))
         by = {}
-        for k, v in self.y.items():
+        for k, v in self.output_shapes.items():
             by[k] = np.zeros((current_batch_size,) +
                              tuple(self.output_shapes[k]))
 
@@ -303,7 +303,7 @@ class LandkartenSequence(Sequence):
                 self.image_data_generator.apply_transform(x, params))
 
             bX[i] = x
-            for k in self.y.keys():
+            for k in self.output_shapes.keys():
                 if self.y[k][j].shape == mask_shape:
                     if self.data_format == 'channels_first':
                         mask = self.y[k][j][:, tlr:tlr + self.r,
@@ -325,7 +325,7 @@ class LandkartenSequence(Sequence):
             else:
                 x = self.generate(self.text_func(), self.r, self.c)
 
-            if 'mask' in self.y:
+            if 'mask' in self.output_shapes:
                 mask = self.generate_mask(x, self.output_shapes['mask'])
 
             bg = self.bg_maps[np.random.choice(len(self.bg_maps))]
@@ -348,7 +348,7 @@ class LandkartenSequence(Sequence):
             params = self.image_data_generator.get_random_transform(x.shape)
             bX[i] = self.image_data_generator.standardize(
                 self.image_data_generator.apply_transform(x, params))
-            if 'mask' in self.y:
+            if 'mask' in self.output_shapes:
                 by['mask'][i] = self.image_data_generator.standardize(
                     self.image_data_generator.apply_transform(mask, params))
             by['p'][i] = np_utils.to_categorical(np.asarray([y]),
@@ -356,7 +356,7 @@ class LandkartenSequence(Sequence):
 
         permutation = np.random.permutation(len(bX))
         bX = bX[permutation]
-        for k in self.y.keys():
+        for k in self.output_shapes.keys():
             by[k] = by[k][permutation]
         return bX, by
 
