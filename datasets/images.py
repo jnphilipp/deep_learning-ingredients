@@ -35,7 +35,7 @@ def from_directory(DATASETS_DIR, dataset, which_set,
             if img.lower().endswith(mask_ext):
                 continue
             X.append(load(img))
-            y['p'].append(num_classes)
+            y['p'].append(nb_classes)
 
             mask_img = re.sub(rf'.({"|".join(ext)})$', r'.mask\g<0>', img)
             if os.path.exists(mask_img):
@@ -48,26 +48,26 @@ def from_directory(DATASETS_DIR, dataset, which_set,
 
     X = []
     y = {'p': [], 'mask': []}
-    num_classes = 0
+    nb_classes = 0
     for e in sorted(os.scandir(dataset_path), key=lambda e: e.name):
         if e.is_dir():
             load_images(e.path)
-            num_classes += 1
-    if num_classes == 0 and len(X) == 0:
+            nb_classes += 1
+    if nb_classes == 0 and len(X) == 0:
         load_images(dataset_path)
 
     samples = len(X)
-    _log.info(f'Found {samples} images belonging to {num_classes} classes.')
+    _log.info(f'Found {samples} images belonging to {nb_classes} classes.')
 
-    if num_classes > 0:
-        y['p'] = np_utils.to_categorical(np.asarray(y['p']), num_classes)
+    if nb_classes > 0:
+        y['p'] = np_utils.to_categorical(np.asarray(y['p']), nb_classes)
     else:
         del y['p']
 
     if len(y['mask']) != samples:
         del y['mask']
 
-    if num_classes == 0 and 'mask' not in y:
+    if nb_classes == 0 and 'mask' not in y:
         return X
     else:
         return X, y
