@@ -22,8 +22,7 @@ def config():
 @ingredient.capture
 def get(sequence_type, batch_size, train_samples=None, validation_samples=None,
         train_image_datagen_args={}, validation_image_datagen_args={},
-        artificial_maps_split=0., artificial_maps_config={}, _log=None,
-        _run=None):
+        artificial_split=0., artificial_config={}, _log=None, _run=None):
     assert sequence_type in {'cifar10', 'landkarten', 'mnist'}
 
     if sequence_type == 'cifar10':
@@ -39,19 +38,17 @@ def get(sequence_type, batch_size, train_samples=None, validation_samples=None,
                                                       batch_size=batch_size)
     elif sequence_type == 'landkarten':
         assert train_samples is not None and validation_samples is not None
-        from_directory_args = {'dataset': 'landkarten', 'which_set': 'teile'}
-        bg_maps_from_directory_args = {'dataset': 'landkarten',
-                                       'which_set': 'teile/bg'}
+        X, y = datasets.images.from_directory(dataset='landkarten',
+                                              which_set='karten',
+                                              mask_names=list('abcde'))
+
         train_generator = LandkartenSequence(
-            train_samples, batch_size, from_directory_args=from_directory_args,
+            X, y, train_samples, batch_size, artificial_split=artificial_split,
             image_datagen_args=train_image_datagen_args,
-            bg_maps_from_directory_args=bg_maps_from_directory_args,
-            artificial_maps_split=artificial_maps_split,
-            artificial_maps_config=artificial_maps_config)
+            artificial_config=artificial_config)
 
         validation_generator = LandkartenSequence(
-            validation_samples, batch_size,
-            from_directory_args=from_directory_args,
+            X, y, validation_samples, batch_size,
             image_datagen_args=validation_image_datagen_args)
     elif sequence_type == 'mnist':
         X, y, X_val, y_val = datasets.keras.mnist()
@@ -68,10 +65,11 @@ def get(sequence_type, batch_size, train_samples=None, validation_samples=None,
 
 
 class LandkartenSequence(Sequence):
-    def __init__(self, samples, batch_size, shape=None, from_directory_args={},
-                 bg_maps_from_directory_args={}, image_datagen_args={},
-                 artificial_maps_split=0., artificial_maps_config={},
-                 data_format=None):
+    def __init__(self, X, y, samples, batch_size, shape=None,
+                 image_datagen_args={}, artificial_split=0.,
+                 artificial_config={}, data_format=None):
+        self.X = X
+        self.y = y
         self.samples = samples
         self.batch_size = batch_size
         self.data_format = data_format
@@ -79,70 +77,47 @@ class LandkartenSequence(Sequence):
             self.data_format = K.image_data_format()
         if self.data_format not in {'channels_first', 'channels_last'}:
             raise ValueError('Unknown data_format:', self.data_format)
-        self.image_data_generator = ImageDataGenerator(**image_datagen_args)
+        self.image_datagen = ImageDataGenerator(**image_datagen_args)
         self.shape = shape
-        self.X, self.y = datasets.images.from_directory(**from_directory_args)
         self.steps = np.ceil(self.samples / self.batch_size)
 
-        if artificial_maps_split is None or artificial_maps_split < 0.:
-            artificial_maps_split = 0.
-        elif artificial_maps_split > 1.:
-            artificial_maps_split = 1.
-        self.artificial_maps_split = artificial_maps_split
-        self.nb_maps = int(np.ceil(self.samples *
-                                   (1 - self.artificial_maps_split)))
-        self.nb_artificial_maps = int(np.floor(self.samples *
-                                               self.artificial_maps_split))
+        if artificial_split is None or artificial_split < 0.:
+            artificial_split = 0.
+        elif artificial_split > 1.:
+            artificial_split = 1.
+        self.artificial_split = artificial_split
 
-        if artificial_maps_config is not None and \
-                self.artificial_maps_split > 0.:
-            if 'fonts' in artificial_maps_config:
-                self.fonts = artificial_maps_config['fonts']
+        if artificial_config is not None and \
+                self.artificial_split > 0.:
+            if 'fonts' in artificial_config:
+                self.fonts = artificial_config['fonts']
             else:
                 raise ValueError('Missing config value "fonts".')
-            if 'font_rg' in artificial_maps_config:
-                self.font_rg = artificial_maps_config['font_rg']
+            if 'font_rg' in artificial_config:
+                self.font_rg = artificial_config['font_rg']
             else:
                 raise ValueError('Missing config value "font_rg".')
 
-            if 'font_size' in artificial_maps_config:
-                if type(artificial_maps_config['font_size']) == str:
-                    self.font_size = eval(artificial_maps_config['font_size'])
+            if 'font_size' in artificial_config:
+                if type(artificial_config['font_size']) == str:
+                    self.font_size = eval(artificial_config['font_size'])
                 else:
-                    self.font_size = artificial_maps_config['font_size']
+                    self.font_size = artificial_config['font_size']
             else:
                 raise ValueError('Missing config value "font_size".')
 
-            if 'font_rgb' in artificial_maps_config:
-                if type(artificial_maps_config['font_rgb']) == str:
-                    self.font_rgb = eval(artificial_maps_config['font_rgb'])
+            if 'font_rgb' in artificial_config:
+                if type(artificial_config['font_rgb']) == str:
+                    self.font_rgb = eval(artificial_config['font_rgb'])
                 else:
-                    self.font_rgb = artificial_maps_config['font_rgb']
+                    self.font_rgb = artificial_config['font_rgb']
             else:
                 raise ValueError('Missing config value "font_rgb".')
-
-            if 'text_func' in artificial_maps_config:
-                if type(artificial_maps_config['text_func']) == str:
-                    self.text_func = eval(artificial_maps_config['text_func'])
-                else:
-                    self.text_func = artificial_maps_config['text_func']
-            else:
-                raise ValueError('Missing config value "text_func".')
-
-            self.bg_maps, _ = datasets.images.from_directory(
-                **bg_maps_from_directory_args)
-
-        self.sum_nb_maps = 0
-        self.sum_nb_artificial_maps = 0
         self.on_epoch_end()
 
     @property
     def shape(self):
         return self.__shape
-
-    @property
-    def output_shapes(self):
-        return self.__output_shapes
 
     @shape.setter
     def shape(self, shape):
@@ -155,9 +130,34 @@ class LandkartenSequence(Sequence):
                 self.r = self.shape[0]
                 self.c = self.shape[1]
 
-    @output_shapes.setter
-    def output_shapes(self, output_shapes):
-        self.__output_shapes = output_shapes
+    def choose(self, j):
+        if self.data_format == 'channels_first':
+            rows = self.X[j].shape[1]
+            cols = self.X[j].shape[2]
+            shape = (3, self.r, self.c)
+        elif self.data_format == 'channels_last':
+            rows = self.X[j].shape[0]
+            cols = self.X[j].shape[1]
+            shape = (self.r, self.c, 3)
+
+        while True:
+            tlr = np.random.randint(0, rows - self.r) if rows > self.r else 0
+            tlc = np.random.randint(0, cols - self.c) if cols > self.c else 0
+
+            text = np.zeros(shape)
+            params = self.image_datagen.get_random_transform(text.shape)
+            for k in self.y.keys():
+                text += self.transform(self.extract(self.y[k][j], tlr, tlc),
+                                       params)
+
+            if len(text[np.where(text > 0.6)]) / text.size >= 0.02:
+                return tlr, tlc, params
+
+    def extract(self, x, tlr, tlc):
+        if self.data_format == 'channels_first':
+            return x[:, tlr:tlr + self.r, tlc:tlc + self.c].copy()
+        elif self.data_format == 'channels_last':
+            return x[tlr:tlr + self.r, tlc:tlc + self.c, :].copy()
 
     def generate(self, text, height, width):
         """Paints the string in a random location in a random font, with a
@@ -170,8 +170,8 @@ class LandkartenSequence(Sequence):
         surface = cairo.ImageSurface(cairo.FORMAT_RGB24, width, height)
         with cairo.Context(surface) as context:
             context.set_source_rgb(1., 1., 1.)
-
             context.paint()
+
             context.select_font_face(
                 np.random.choice(self.fonts),
                 np.random.choice([cairo.FONT_SLANT_NORMAL,
@@ -203,58 +203,59 @@ class LandkartenSequence(Sequence):
             context.show_text(text)
 
         buf = surface.get_data()
-        a = np.frombuffer(buf, np.uint8)
-        a.shape = (height, width, 4)
+        x = np.frombuffer(buf, np.uint8)
+        x.shape = (height, width, 4)
+        x = x[..., [2, 1, 0]]
         if self.data_format == 'channels_first':
-            a = a[0:3, :, :]
-            a = a.transpose(2, 0, 1)
+            x = x.transpose(2, 0, 1)
             channel_axis = 0
             row_axis = 1
             col_axis = 2
         elif self.data_format == 'channels_last':
-            a = a[:, :, 0:3]
             channel_axis = 2
             row_axis = 0
             col_axis = 1
 
         rg = (-self.font_rg - self.font_rg) * np.random.random() + self.font_rg
-        return random_rotation(a.astype(np.float32), rg, row_axis=row_axis,
-                               col_axis=col_axis, channel_axis=channel_axis)
-
-    def generate_mask(self, x, shape):
+        x = random_rotation(x.astype(np.float32), rg, row_axis=row_axis,
+                            col_axis=col_axis, channel_axis=channel_axis)
         if self.data_format == 'channels_first':
             grayscale = np.dot(x[:3, ...], [0.299, 0.587, 0.114])
+            grayscale = grayscale.reshape((1,) + grayscale.shape)
+
+            x[0, ...][x[0, ...] == 255.] = 247.
+            x[1, ...][x[1, ...] == 255.] = 226.
+            x[2, ...][x[2, ...] == 255.] = 185.
         elif self.data_format == 'channels_last':
             grayscale = np.dot(x[..., :3], [0.299, 0.587, 0.114])
+            grayscale = grayscale.reshape(grayscale.shape + (1,))
+
+            x[..., 0][x[..., 0] == 255.] = 247.
+            x[..., 1][x[..., 1] == 255.] = 226.
+            x[..., 2][x[..., 2] == 255.] = 185.
+
         grayscale[grayscale < 225.] = 0.
         grayscale[grayscale >= 225.] = 255.
-
-        mask = np.zeros(shape)
-        if self.data_format == 'channels_first':
-            if shape[0] == 1:
-                mask[0] = 255. - grayscale
-            else:
-                mask[0] = grayscale
-                mask[1] = 255. - grayscale
-        elif self.data_format == 'channels_last':
-            if shape[-1] == 1:
-                mask[:, :, 0] = 255. - grayscale
-            else:
-                mask[:, :, 0] = grayscale
-                mask[:, :, 1] = 255. - grayscale
-        return mask
+        mask = 255. - grayscale
+        if len(mask[mask == 255.]) == 0:
+            return self.generate(text, height, width)
+        else:
+            return x, mask
 
     def on_epoch_end(self):
-        self.index_array = []
-        for i in range(int(np.floor(self.nb_maps / float(len(self.X))))):
-            perm = np.random.permutation(len(self.X))
-            self.index_array += list(perm)
+        nb_maps = int(np.ceil(self.samples * (1 - self.artificial_split)))
 
-            nb_rest = self.nb_maps - len(self.index_array)
-            if nb_rest > 0:
-                perm = np.random.permutation(len(self.X))
-                self.index_array += list(perm)[:nb_rest]
-        self.index_array = np.random.permutation(self.index_array)
+        self.sum_maps = 0
+        self.index_array = np.random.permutation(len(self.X))
+        self.index_array = np.repeat(self.index_array,
+                                     int(np.floor(nb_maps / len(self.X))))
+        if len(self.index_array) != nb_maps:
+            self.index_array = np.append(self.index_array, np.array(
+                [self.index_array[-1]] * (nb_maps - len(self.index_array))))
+
+    def transform(self, x, params):
+        return self.image_datagen.standardize(
+            self.image_datagen.apply_transform(x, params))
 
     def __getitem__(self, index):
         assert self.shape is not None
@@ -263,100 +264,64 @@ class LandkartenSequence(Sequence):
             current_batch_size = self.batch_size
         else:
             current_batch_size = self.samples - (index * self.batch_size)
+        current_maps = int(np.ceil(current_batch_size *
+                                   (1 - self.artificial_split)))
+        current_artificial = int(np.floor(current_batch_size *
+                                          self.artificial_split))
 
         bX = np.zeros((current_batch_size,) + tuple(self.shape))
-        by = {}
-        for k, v in self.output_shapes.items():
-            by[k] = np.zeros((current_batch_size,) +
-                             tuple(self.output_shapes[k]))
+        by = {'symbols': None, 'text': None}
+        if self.data_format == 'channels_first':
+            by['symbols'] = np.zeros((current_batch_size, len(self.y.keys()),
+                                      self.r, self.c))
+            by['text'] = np.zeros((current_batch_size, 1, self.r, self.c))
+        elif self.data_format == 'channels_last':
+            by['symbols'] = np.zeros((current_batch_size, self.r, self.c,
+                                      len(self.y.keys())))
+            by['text'] = np.zeros((current_batch_size, self.r, self.c, 1))
 
-        current_nb_maps = int(np.ceil(current_batch_size *
-                                      (1 - self.artificial_maps_split)))
-        current_nb_artificial_maps = int(np.floor(current_batch_size *
-                                                  self.artificial_maps_split))
+        self.sum_maps += current_maps
+        for i, j in enumerate(self.index_array[self.sum_maps:
+                                               self.sum_maps + current_maps]):
+            tlr, tlc, params = self.choose(j)
+            bX[i] = self.transform(self.extract(self.X[j], tlr, tlc), params)
+            for a, k in enumerate(self.y.keys()):
+                mask = self.transform(self.extract(self.y[k][j], tlr, tlc),
+                                      params)
+                if self.data_format == 'channels_first':
+                    by['symbols'][i, a, ...] = mask[0, ...]
+                elif self.data_format == 'channels_last':
+                    by['symbols'][i, ..., a] = mask[..., 0]
+                by['text'][i] += mask
 
-        self.sum_nb_maps += current_nb_maps
-        self.sum_nb_artificial_maps += current_nb_artificial_maps
+        for i in range(current_maps, current_maps + current_artificial):
+            text = ''.join(np.random.choice([
+                ['a', 'A'],
+                ['b', 'B'],
+                ['c', 'C'],
+                ['d', 'D'],
+                ['e', 'E'],
+            ][np.random.choice(3)], 2))
 
-        for i, j in enumerate(self.index_array[self.sum_nb_maps:
-                              self.sum_nb_maps + current_nb_maps]):
-            x = self.X[j]
-            if self.data_format == 'channels_first':
-                rows = x.shape[1]
-                cols = x.shape[2]
-                mask_shape = (1, rows, cols)
-            elif self.data_format == 'channels_last':
-                rows = x.shape[0]
-                cols = x.shape[1]
-                mask_shape = (rows, cols, 1)
+            while True:
+                x, mask = self.generate(text, self.r, self.c)
 
-            tlr = np.random.randint(0, rows - self.r) if rows > self.r else 0
-            tlc = np.random.randint(0, cols - self.c) if cols > self.c else 0
+                params = self.image_datagen.get_random_transform(x.shape)
+                x = self.transform(x, params)
+                mask = self.transform(mask, params)
 
-            if self.data_format == 'channels_first':
-                x = x[:, tlr:tlr + self.r, tlc:tlc + self.c]
-            elif self.data_format == 'channels_last':
-                x = x[tlr:tlr + self.r, tlc:tlc + self.c, :]
-
-            params = self.image_data_generator.get_random_transform(x.shape)
-            x = self.image_data_generator.standardize(
-                self.image_data_generator.apply_transform(x, params))
+                if len(mask[np.where(mask > 0.6)]) / mask.size >= 0.02:
+                        break
 
             bX[i] = x
-            for k in self.output_shapes.keys():
-                if self.y[k][j].shape == mask_shape:
-                    if self.data_format == 'channels_first':
-                        mask = self.y[k][j][:, tlr:tlr + self.r,
-                                            tlc:tlc + self.c]
-                    elif self.data_format == 'channels_last':
-                        mask = self.y[k][j][tlr:tlr + self.r,
-                                            tlc:tlc + self.c, :]
-                    by[k][i] = self.image_data_generator.standardize(
-                        self.image_data_generator.apply_transform(mask,
-                                                                  params))
-                else:
-                    by[k][i] = self.y[k][j]
-
-        for i in range(current_nb_maps,
-                       current_nb_maps + current_nb_artificial_maps):
-            y = np.random.choice([0, 1])
-            if y == 0:
-                x = self.generate('', self.r, self.c)
-            else:
-                x = self.generate(self.text_func(), self.r, self.c)
-
-            if 'mask' in self.output_shapes:
-                mask = self.generate_mask(x, self.output_shapes['mask'])
-
-            bg = self.bg_maps[np.random.choice(len(self.bg_maps))]
-            if self.data_format == 'channels_first':
-                rows = bg.shape[1]
-                cols = bg.shape[2]
-            elif self.data_format == 'channels_last':
-                rows = bg.shape[0]
-                cols = bg.shape[1]
-
-            tlr = np.random.randint(0, rows - self.r) if rows > self.r else 0
-            tlc = np.random.randint(0, cols - self.c) if cols > self.c else 0
-
-            if self.data_format == 'channels_first':
-                x *= bg[:, tlr:tlr + self.r, tlc:tlc + self.c]
-            elif self.data_format == 'channels_last':
-                x *= bg[tlr:tlr + self.r, tlc:tlc + self.c, :]
-            x /= 255
-
-            params = self.image_data_generator.get_random_transform(x.shape)
-            bX[i] = self.image_data_generator.standardize(
-                self.image_data_generator.apply_transform(x, params))
-            if 'mask' in self.output_shapes:
-                by['mask'][i] = self.image_data_generator.standardize(
-                    self.image_data_generator.apply_transform(mask, params))
-            by['p'][i] = np_utils.to_categorical(np.asarray([y]),
-                                                 len(self.y['p'][0]))
+            for a, k in enumerate(self.y.keys()):
+                if text[0].lower() == k:
+                    by['symbols'][i, ..., a] = mask[..., 0]
+                    by['text'][i] += mask
 
         permutation = np.random.permutation(len(bX))
         bX = bX[permutation]
-        for k in self.output_shapes.keys():
+        for k in by.keys():
             by[k] = by[k][permutation]
         return bX, by
 
