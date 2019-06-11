@@ -27,7 +27,7 @@ def load(path, color_mode='rgb', target_size=None, interpolation='nearest',
 
 
 @ingredient.capture
-def from_directory(DATASETS_DIR, dataset, which_set,
+def from_directory(DATASETS_DIR, dataset, which_set, mask_names=['mask'],
                    ext=('jpg', 'jpeg', 'bmp', 'png', 'ppm', 'tif', 'tiff'),
                    _log=None):
     def load_images(path):
@@ -37,17 +37,19 @@ def from_directory(DATASETS_DIR, dataset, which_set,
             X.append(load(img))
             y['p'].append(nb_classes)
 
-            mask_img = re.sub(rf'.({"|".join(ext)})$', r'.mask\g<0>', img)
-            if os.path.exists(mask_img):
-                y['mask'].append(load(mask_img, 'grayscale'))
+            for mask_name in mask_names:
+                mask_img = re.sub(rf'.({"|".join(ext)})$',
+                                  rf'.{mask_name}\g<0>', img)
+                if os.path.exists(mask_img):
+                    y[mask_name].append(load(mask_img, 'grayscale'))
 
     _log.info(f'Loading images [{dataset}: {which_set}].')
     dataset_path = os.path.join(DATASETS_DIR, dataset, which_set)
-    mask_ext = tuple(f'.mask.{e}' for e in ((ext,)
-                                            if isinstance(ext, str) else ext))
+    mask_ext = tuple(f'.{mask_name}.{e}' for mask_name in mask_names
+                     for e in ((ext,) if isinstance(ext, str) else ext))
 
     X = []
-    y = {'p': [], 'mask': []}
+    y = {mask_name: [] for mask_name in mask_names + ['p']}
     nb_classes = 0
     for e in sorted(os.scandir(dataset_path), key=lambda e: e.name):
         if e.is_dir():
@@ -57,17 +59,19 @@ def from_directory(DATASETS_DIR, dataset, which_set,
         load_images(dataset_path)
 
     samples = len(X)
-    _log.info(f'Found {samples} images belonging to {nb_classes} classes.')
-
     if nb_classes > 0:
         y['p'] = np_utils.to_categorical(np.asarray(y['p']), nb_classes)
     else:
         del y['p']
 
-    if len(y['mask']) != samples:
-        del y['mask']
+    for mask_name in mask_names:
+        if len(y[mask_name]) != samples:
+            del y[mask_name]
 
-    if nb_classes == 0 and 'mask' not in y:
+    _log.info(f'Found {samples} images belonging to {nb_classes} classes and' +
+              f' with masks {", ".join(k for k in y.keys() if k != "p")}.')
+
+    if len(y.keys()) == 0:
         return X
     else:
         return X, y
