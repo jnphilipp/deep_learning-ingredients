@@ -16,10 +16,10 @@ def build(inner_net_type, outputs, optimizer, _log, loss_weights=None,
     if 'name' in kwargs:
         name = kwargs['name']
         del kwargs['name']
-        _log.info('Build Siamese [%s] model [%s]' % (inner_net_type, name))
+        _log.info('Build Siamese [{inner_net_type}] model [%s]' % name)
     else:
         name = 'siamese'
-        _log.info('Build Siamese [%s] model' % inner_net_type)
+        _log.info('Build Siamese [{inner_net_type}] model')
 
     inner_model = models.get(None, inner_net_type,
                              outputs=[{'t': 'vec', 'loss': 'mse'}], *args,
@@ -51,7 +51,7 @@ def build(inner_net_type, outputs, optimizer, _log, loss_weights=None,
                                output_shape=(1,))([xr, xl]))
 
     siamese_model = Model(inputs=[input_r, input_l], outputs=outs, name=name)
-    siamese_model.compile(loss=loss, optimizer=deserialize(optimizer),
+    siamese_model.compile(loss=loss, optimizer=deserialize(optimizer.copy()),
                           metrics=metrics, loss_weights=loss_weights,
                           sample_weight_mode=sample_weight_mode,
                           weighted_metrics=weighted_metrics,

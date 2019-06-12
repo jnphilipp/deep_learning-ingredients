@@ -77,7 +77,7 @@ def build(grayscale, rows, cols, blocks, layers, optimizer,
 
     # Model
     model = Model(inputs=inputs, outputs=outs, name=name)
-    model.compile(loss=loss, optimizer=deserialize_optimizers(optimizer),
+    model.compile(loss=loss, optimizer=deserialize_optimizers(optimizer.copy()),
                   metrics=metrics, loss_weights=loss_weights,
                   sample_weight_mode=sample_weight_mode,
                   weighted_metrics=weighted_metrics,
@@ -129,6 +129,7 @@ def block(inputs, N, cols, rows, connection_type='base', do_pooling=True,
     if connection_type == 'densely':
         assert concat_axis is not None
     nb_filters = kwargs['nb_filters'] if 'nb_filters' in kwargs else 0
+    pooling = pooling.copy()
 
     convs = []
     for j in range(N):

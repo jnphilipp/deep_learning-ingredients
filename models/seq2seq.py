@@ -73,7 +73,7 @@ def build(vocab_size, N, layers, outputs, optimizer, _log,
     # Model
     model = Model(inputs=inputs, outputs=outs,
                   name=kwargs['name'] if 'name' in kwargs else 'seq2seq')
-    model.compile(loss=loss, optimizer=deserialize_optimizers(optimizer),
+    model.compile(loss=loss, optimizer=deserialize_optimizers(optimizer.copy()),
                   metrics=metrics, loss_weights=loss_weights,
                   sample_weight_mode=sample_weight_mode,
                   weighted_metrics=weighted_metrics,

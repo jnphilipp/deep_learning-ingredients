@@ -9,9 +9,9 @@ from .. import models
 
 
 @ingredient.capture
-def build(encoder_net_type, decoder_net_type, layers, loss, metrics, optimizer,
-          _log, loss_weights=None, sample_weight_mode=None,
-          weighted_metrics=None, target_tensors=None, *args, **kwargs):
+def build(encoder_net_type, decoder_net_type, loss, metrics, optimizer,
+          loss_weights=None, sample_weight_mode=None, weighted_metrics=None,
+          target_tensors=None, _log=None, *args, **kwargs):
     if 'name' in kwargs:
         name = kwargs['name']
         del kwargs['name']
@@ -34,8 +34,8 @@ def build(encoder_net_type, decoder_net_type, layers, loss, metrics, optimizer,
 
     # Model
     model = Model(inputs=inputs, outputs=outputs, name=name)
-    model.compile(loss=loss, optimizer=deserialize(optimizer), metrics=metrics,
-                  loss_weights=loss_weights,
+    model.compile(loss=loss, optimizer=deserialize(optimizer.copy()),
+                  metrics=metrics, loss_weights=loss_weights,
                   sample_weight_mode=sample_weight_mode,
                   weighted_metrics=weighted_metrics,
                   target_tensors=target_tensors)
