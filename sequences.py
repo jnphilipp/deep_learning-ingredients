@@ -40,7 +40,7 @@ def get(sequence_type, batch_size, train_samples=None, validation_samples=None,
         assert train_samples is not None and validation_samples is not None
         X, y = datasets.images.from_directory(dataset='landkarten',
                                               which_set='karten',
-                                              mask_names=list('abcde'))
+                                              mask_names=list('abcdefg'))
 
         train_generator = LandkartenSequence(
             X, y, train_samples, batch_size, artificial_split=artificial_split,
@@ -301,6 +301,8 @@ class LandkartenSequence(Sequence):
                 ['c', 'C'],
                 ['d', 'D'],
                 ['e', 'E'],
+                ['f', 'F'],
+                ['g', 'G'],
             ][np.random.choice(3)], 2))
 
             while True:
