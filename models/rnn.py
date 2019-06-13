@@ -44,8 +44,8 @@ def build(vocab_size, N, layers, optimizer, loss_weights=None,
 
     # Model
     model = Model(inputs=inputs, outputs=outs, name=name)
-    model.compile(loss=loss, optimizer=deserialize_optimizers(optimizer),
-                  metrics=metrics, loss_weights=loss_weights,
+    model.compile(loss=loss, metrics=metrics, loss_weights=loss_weights,
+                  optimizer=deserialize_optimizers(optimizer.copy()),
                   sample_weight_mode=sample_weight_mode,
                   weighted_metrics=weighted_metrics,
                   target_tensors=target_tensors)
