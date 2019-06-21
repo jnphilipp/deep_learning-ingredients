@@ -16,8 +16,8 @@ def config():
 
 @ingredient.capture
 def get(earlystopping=None, modelcheckpoint=None, reducelronplateau=None,
-        printsampleprediction=None, terminateonnan=True, weightslogging=None,
-        _log=None, _run=None):
+        printsampleprediction=None, terminateonnan=True,
+        weightslogging={'mode': 'epochs'}, _log=None, _run=None):
     callbacks = []
 
     if terminateonnan:
