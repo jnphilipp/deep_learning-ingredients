@@ -5,7 +5,6 @@ import math
 from keras import backend as K
 from keras.layers import deserialize as deserialize_layer, Input, Dense
 from keras.models import Model
-from keras.optimizers import deserialize
 
 from . import ingredient
 from .outputs import outputs
@@ -49,8 +48,8 @@ def build(input_shape, N, layers, optimizer, loss_weights=None,
     # Model
     model = Model(inputs=inputs, outputs=outs,
                   name=kwargs['name'] if 'name' in kwargs else 'dense')
-    model.compile(loss=loss, optimizer=deserialize(optimizer.copy()),
-                  metrics=metrics, loss_weights=loss_weights,
+    model.compile(loss=loss, optimizer=optimizer, metrics=metrics,
+                  loss_weights=loss_weights,
                   sample_weight_mode=sample_weight_mode,
                   weighted_metrics=weighted_metrics,
                   target_tensors=target_tensors)

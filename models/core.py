@@ -9,7 +9,7 @@ from keras.utils import plot_model
 from keras.utils.layer_utils import count_params
 
 from . import autoencoder, cnn, dense, ingredient, rnn, seq2seq, siamese
-from .. import callbacks
+from .. import callbacks, optimizers
 
 
 @ingredient.config
@@ -27,6 +27,7 @@ def get(path, net_type, _log, *args, **kwargs):
     else:
         return_callbacks = True
 
+    kwargs['optimizer'] = optimizers.get()
     if not path or not os.path.exists(path):
         if net_type == 'autoencoder':
             model = autoencoder.build(*args, **kwargs)

@@ -6,7 +6,6 @@ from keras import backend as K
 from keras.layers import *
 from keras.layers import deserialize as deserialize_layer
 from keras.models import Model
-from keras.optimizers import deserialize as deserialize_optimizers
 
 from . import ingredient
 from .outputs import outputs
@@ -77,8 +76,8 @@ def build(grayscale, rows, cols, blocks, layers, optimizer,
 
     # Model
     model = Model(inputs=inputs, outputs=outs, name=name)
-    model.compile(loss=loss, optimizer=deserialize_optimizers(optimizer.copy()),
-                  metrics=metrics, loss_weights=loss_weights,
+    model.compile(loss=loss, optimizer=optimizer, metrics=metrics,
+                  loss_weights=loss_weights,
                   sample_weight_mode=sample_weight_mode,
                   weighted_metrics=weighted_metrics,
                   target_tensors=target_tensors)

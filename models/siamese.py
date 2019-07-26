@@ -3,7 +3,6 @@
 from keras import backend as K
 from keras.layers import Input, Lambda
 from keras.models import Model
-from keras.optimizers import deserialize
 
 from . import ingredient
 from .. import models
@@ -51,8 +50,8 @@ def build(inner_net_type, outputs, optimizer, _log, loss_weights=None,
                                output_shape=(1,))([xr, xl]))
 
     siamese_model = Model(inputs=[input_r, input_l], outputs=outs, name=name)
-    siamese_model.compile(loss=loss, optimizer=deserialize(optimizer.copy()),
-                          metrics=metrics, loss_weights=loss_weights,
+    siamese_model.compile(loss=loss, optimizer=optimizer, metrics=metrics,
+                          loss_weights=loss_weights,
                           sample_weight_mode=sample_weight_mode,
                           weighted_metrics=weighted_metrics,
                           target_tensors=target_tensors)
