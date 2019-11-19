@@ -27,14 +27,16 @@ def build(N: int, merge: dict, layers: dict, optimizer: Optimizer,
         _log.info('Build Seq2Seq model')
 
     ins, xs = inputs()
-    if merge['depth'] == 0:
-        xs = [merge_layer(xs)]
+    if ('depth' not in merge and len(xs) > 1) or \
+            ('depth' in merge and merge['depth'] == 0):
+        if 't' not in merge:
+            xs = [merge_layer(xs, t='concatenate')]
+        else:
+            xs = [merge_layer(xs)]
 
     tensors: dict = {}
     for j in range(N):
-        print(j, xs)
         for i in range(len(xs)):
-            print(i)
             x = xs[i]
 
             if 'recurrent_in' in layers:
@@ -53,7 +55,7 @@ def build(N: int, merge: dict, layers: dict, optimizer: Optimizer,
                 tensors[j] = deserialize_layer(rnn_layer)
             xs[i] = tensors[j](x)
 
-        if merge['depth'] == j + 1:
+        if 'depth' in merge and merge['depth'] == j + 1:
             xs = [merge_layer(xs)]
 
     # outputs

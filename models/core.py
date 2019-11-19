@@ -17,7 +17,7 @@ def config():
     path = None
     inputs = []
     layers = {}
-    merge = []
+    merge = {}
     outputs = []
 
 
