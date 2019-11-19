@@ -1,24 +1,28 @@
 # -*- coding: utf-8 -*-
 
-from keras import backend as K
-from keras.layers import Input, Lambda
-from keras.models import Model
+from logging import Logger
+from tensorflow.keras import backend as B
+from tensorflow.keras.layers import Input, Lambda
+from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Optimizer
+from typing import Union
 
 from . import ingredient
 from .. import models
 
 
 @ingredient.capture
-def build(inner_net_type, outputs, optimizer, _log, loss_weights=None,
-          sample_weight_mode=None, weighted_metrics=None, target_tensors=None,
-          *args, **kwargs):
+def build(inner_net_type: str, outputs: dict, optimizer: Optimizer,
+          _log: Logger, loss_weights: Union[list, dict] = None,
+          sample_weight_mode: str = None, weighted_metrics: list = None,
+          target_tensors=None, *args, **kwargs) -> Model:
     if 'name' in kwargs:
         name = kwargs['name']
         del kwargs['name']
-        _log.info('Build Siamese [{inner_net_type}] model [%s]' % name)
+        _log.info(f'Build Siamese [{inner_net_type}] model [{name}]')
     else:
         name = 'siamese'
-        _log.info('Build Siamese [{inner_net_type}] model')
+        _log.info(f'Build Siamese [{inner_net_type}] model')
 
     inner_model = models.get(None, inner_net_type,
                              outputs=[{'t': 'vec', 'loss': 'mse'}], *args,
@@ -45,7 +49,7 @@ def build(inner_net_type, outputs, optimizer, _log, loss_weights=None,
             metrics[output['name']] = output['metrics']
 
         if output['t'] == 'distance':
-            outs.append(Lambda(lambda x: K.mean(K.abs(x[0] - x[1]), axis=-1),
+            outs.append(Lambda(lambda x: B.mean(B.abs(x[0] - x[1]), axis=-1),
                                name=output['name'],
                                output_shape=(1,))([xr, xl]))
 

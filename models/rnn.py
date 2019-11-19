@@ -1,48 +1,63 @@
 # -*- coding: utf-8 -*-
 
-from copy import deepcopy
-from keras import backend as K
-from keras.layers import *
-from keras.layers import deserialize as deserialize_layer
-from keras.models import Model
+from logging import Logger
+from tensorflow.keras.layers import Bidirectional
+from tensorflow.keras.layers import deserialize as deserialize_layer
+from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Optimizer
+from typing import Union
 
 from . import ingredient
+from .inputs import inputs
+from .merge_layer import merge_layer
 from .outputs import outputs
 
 
 @ingredient.capture
-def build(vocab_size, N, layers, optimizer, loss_weights=None,
-          sample_weight_mode=None, weighted_metrics=None, target_tensors=None,
-          _log=None, *args, **kwargs):
+def build(N: int, merge: dict, layers: dict, optimizer: Optimizer,
+          _log: Logger, loss_weights: Union[list, dict] = None,
+          sample_weight_mode: str = None, weighted_metrics: list = None,
+          target_tensors=None, *args, **kwargs) -> Model:
     if 'name' in kwargs:
         name = kwargs['name']
+        del kwargs['name']
         _log.info(f'Build RNN model [{name}]')
     else:
         name = 'rnn'
         _log.info('Build RNN model')
 
-    inputs = Input(shape=(None,), name='input')
-    x = Embedding.from_config(dict(layers['embedding'],
-                                   **{'input_dim': vocab_size}))(inputs)
-    if layers['embedding_dropout']:
-        x = deserialize_layer(layers['embedding_dropout'])(x)
+    ins, xs = inputs()
+    if merge['depth'] == 0:
+        xs = [merge_layer(xs)]
 
-    for i in range(N):
-        rnn_layer = deepcopy(layers['recurrent'])
-        if i != N - 1:
-            rnn_layer['config']['return_sequences'] = True
+    tensors: dict = {}
+    for j in range(N):
+        print(j, xs)
+        for i in range(len(xs)):
+            print(i)
+            x = xs[i]
 
-        if 'bidirectional' in layers and layers['bidirectional']:
-            conf = dict(layers['bidirectional'], **{'layer': rnn_layer})
-            x = Bidirectional.from_config(conf)(x)
-        else:
-            x = deserialize_layer(rnn_layer)(x)
+            rnn_layer = dict(**layers['recurrent'])
+            if j != N - 1:
+                rnn_layer['config'] = dict(rnn_layer['config'],
+                                           **{'return_sequences': True})
+
+            if 'bidirectional' in layers and layers['bidirectional'] and \
+                    j not in tensors:
+                conf = dict(layers['bidirectional'], **{'layer': rnn_layer})
+                tensors[j] = Bidirectional.from_config(conf)
+            elif j not in tensors:
+                tensors[j] = deserialize_layer(rnn_layer)
+            xs[i] = tensors[j](x)
+
+        if merge['depth'] == j + 1:
+            xs = [merge_layer(xs)]
 
     # outputs
-    outs, loss, metrics = outputs(x)
+    outs, loss, metrics = outputs(xs)
 
     # Model
-    model = Model(inputs=inputs, outputs=outs, name=name)
+    model = Model(inputs=ins, outputs=outs, name=name)
     model.compile(loss=loss, metrics=metrics, loss_weights=loss_weights,
                   optimizer=optimizer, sample_weight_mode=sample_weight_mode,
                   weighted_metrics=weighted_metrics,

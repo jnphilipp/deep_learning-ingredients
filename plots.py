@@ -4,13 +4,15 @@ import numpy as np
 import os
 
 from sacred import Ingredient
+from sacred.run import Run
 
 
 ingredient = Ingredient('plots')
 
 
 @ingredient.capture
-def scatter(name, data, legend=True, xlim=None, ylim=None, _run=None):
+def scatter(name: str, data: list, legend: bool = True, xlim: int = None,
+            ylim: int = None, _run: Run = None):
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.cm
@@ -42,7 +44,8 @@ def scatter(name, data, legend=True, xlim=None, ylim=None, _run=None):
 
 
 @ingredient.capture
-def lines(name, x1_data, x2_data=None, legend=True, _run=None):
+def lines(name: str, x1_data: dict, x2_data: dict = None, legend: bool = True,
+          _run: Run = None):
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
@@ -58,16 +61,17 @@ def lines(name, x1_data, x2_data=None, legend=True, _run=None):
         lines.append(ax1.plot(row['x'], row['y'], label=row['label']))
         if x2_data:
             next(ax2._get_lines.prop_cycler)['color']
-    for row in x2_data['lines']:
-        lines.append(ax2.plot(row['x'], row['y'], label=row['label']))
+    if x2_data:
+        for row in x2_data['lines']:
+            lines.append(ax2.plot(row['x'], row['y'], label=row['label']))
 
     if 'xlabel' in x1_data:
         ax1.set_xlabel(x1_data['xlabel'])
     if 'ylabel' in x1_data:
         ax1.set_ylabel(x1_data['ylabel'])
-    if 'xlabel' in x2_data:
+    if x2_data and 'xlabel' in x2_data:
         ax2.set_xlabel(x2_data['xlabel'])
-    if 'ylabel' in x2_data:
+    if x2_data and 'ylabel' in x2_data:
         ax2.set_ylabel(x2_data['ylabel'])
 
     ax1.legend([l for ls in lines for l in ls],

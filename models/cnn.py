@@ -2,23 +2,26 @@
 
 import math
 
-from keras import backend as K
-from keras.layers import *
-from keras.layers import deserialize as deserialize_layer
-from keras.models import Model
+from logging import Logger
+from tensorflow.keras.layers import concatenate, multiply
+from tensorflow.keras.layers import (Activation, BatchNormalization, Conv2D,
+                                     Flatten, Input, Reshape)
+from tensorflow.keras.layers import deserialize as deserialize_layer
+from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Optimizer
+from tensorflow.python.framework.ops import Tensor
+from typing import List, Union
 
 from . import ingredient
 from .outputs import outputs
 
 
-DEFAULT_CONCAT_AXIS = 1 if K.image_data_format() == 'channels_first' else -1
-
-
 @ingredient.capture
-def build(grayscale, rows, cols, blocks, layers, optimizer,
-          connection_type='base', loss_weights=None, sample_weight_mode=None,
-          weighted_metrics=None, target_tensors=None, _log=None, *args,
-          **kwargs):
+def build(grayscale: bool, rows: int, cols: int, blocks: int, layers: dict,
+          optimizer: Optimizer,  _log: Logger, connection_type: str = 'base',
+          loss_weights: Union[list, dict] = None,
+          sample_weight_mode: str = None, weighted_metrics: list = None,
+          target_tensors=None, *args, **kwargs) -> Model:
     assert connection_type in ['base', 'densely']
     if connection_type == 'base':
         connection_name = ''
@@ -27,6 +30,7 @@ def build(grayscale, rows, cols, blocks, layers, optimizer,
 
     if 'name' in kwargs:
         name = kwargs['name']
+        del kwargs['name']
         _log.info(f'Build {connection_name}CNN model [{name}]')
     else:
         if connection_type == 'base':
@@ -36,12 +40,7 @@ def build(grayscale, rows, cols, blocks, layers, optimizer,
         _log.info(f'Build {connection_name}CNN model')
 
     nb_filters = 1 if grayscale else 3
-    if K.image_data_format() == 'channels_first':
-        input_shape = (nb_filters, rows, cols)
-    else:
-        input_shape = (rows, cols, nb_filters)
-
-    inputs = Input(shape=input_shape, name='input')
+    inputs = Input(shape=(rows, cols, nb_filters), name='input')
     if 'noise' in layers and layers['noise']:
         x = deserialize_layer(layers['noise'])(inputs)
     else:
@@ -50,7 +49,7 @@ def build(grayscale, rows, cols, blocks, layers, optimizer,
     if 'filters' in layers and type(layers['filters']) == list:
         assert len(layers['filters']) == blocks
 
-    shortcuts = []
+    shortcuts: List[Tensor] = []
     for i in range(blocks):
         filters = None
         if 'filters' in layers:
@@ -85,8 +84,9 @@ def build(grayscale, rows, cols, blocks, layers, optimizer,
 
 
 @ingredient.capture(prefix='layers')
-def layer(x, batchnorm=None, bottleneck2d=None, conv2d={}, dropout=None,
-          filters=None, k=None):
+def layer(x: Tensor, batchnorm: dict = None, bottleneck2d: dict = None,
+          conv2d: dict = {}, dropout: dict = None, filters: int = None,
+          k: int = None):
     if batchnorm is not None:
         if bottleneck2d is not None:
             bottleneck_activation = bottleneck2d['activation']
@@ -120,10 +120,12 @@ def layer(x, batchnorm=None, bottleneck2d=None, conv2d={}, dropout=None,
 
 
 @ingredient.capture(prefix='layers')
-def block(inputs, N, cols, rows, connection_type='base', do_pooling=True,
-          attention2d=None, batchnorm=None, bottleneck2d=None, conv2d={},
-          pooling={}, concat_axis=DEFAULT_CONCAT_AXIS, dropout=None,
-          theta=None, filters=None, k=None, *args, **kwargs):
+def block(inputs: Tensor, N: int, cols: int, rows: int,
+          connection_type: str = 'base', do_pooling: bool = True,
+          attention2d: dict = None, batchnorm: dict = None,
+          bottleneck2d: dict = None, conv2d: dict = {}, pooling: dict = {},
+          concat_axis: int = -1, dropout: dict = None, theta: float = None,
+          filters: int = None, k: int = None, *args, **kwargs):
     assert connection_type in ['base', 'densely']
     if connection_type == 'densely':
         assert concat_axis is not None
@@ -146,7 +148,7 @@ def block(inputs, N, cols, rows, connection_type='base', do_pooling=True,
 
     if attention2d is not None:
         w = Conv2D.from_config(dict(attention2d, **{'filters': 1}))(x)
-        w_shape = w._keras_shape[1:]
+        w_shape = w._shape_val[1:]
         w = Flatten()(w)
         w = Activation('softmax')(w)
         w = Reshape(w_shape)(w)
@@ -203,7 +205,7 @@ def block(inputs, N, cols, rows, connection_type='base', do_pooling=True,
 @ingredient.capture(prefix='layers')
 def upblock(inputs, N, cols, rows, attention2d=None, batchnorm=None,
             bottleneck2d=None, conv2d={}, conv2dt={}, dropout=None,
-            do_transpose=True, concat_axis=DEFAULT_CONCAT_AXIS,
+            do_transpose=True, concat_axis=-1,
             theta=None, filters=None, k=None, *args, **kwargs):
     assert connection_type in ['base', 'densely']
     if connection_type == 'densely':

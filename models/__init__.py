@@ -11,10 +11,10 @@ ingredient = Ingredient('models',
 
 
 from .core import *
-from . import autoencoder
+# from . import autoencoder
 from . import cnn
 from . import dense
 # from . import gan
 from . import rnn
 from . import seq2seq
-from . import siamese
+# from . import siamese

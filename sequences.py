@@ -14,13 +14,8 @@ from . import datasets
 ingredient = Ingredient('sequences', ingredients=[datasets.ingredient])
 
 
-@ingredient.config
-def config():
-    terminateonnan = True
-
-
 @ingredient.capture
-def get(sequence_type, batch_size, train_samples=None, validation_samples=None,
+def get(sequence_type: str, batch_size: int, train_samples=None, validation_samples=None,
         train_image_datagen_args={}, validation_image_datagen_args={},
         artificial_split=0., artificial_config={}, _log=None, _run=None):
     assert sequence_type in {'cifar10', 'landkarten', 'mnist'}

@@ -2,11 +2,9 @@
 
 import os
 
-from callbacks import PrintSamplePrediction, WeightsLogging
-from keras.callbacks import *
-from sacred import Ingredient
+from tensorflow.keras.callbacks import *
 
-ingredient = Ingredient('callbacks')
+from . import ingredient, PrintSamplePrediction, WeightsLogging
 
 
 @ingredient.config
