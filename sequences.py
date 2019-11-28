@@ -18,20 +18,9 @@ ingredient = Ingredient('sequences', ingredients=[datasets.ingredient])
 def get(sequence_type: str, batch_size: int, train_samples=None, validation_samples=None,
         train_image_datagen_args={}, validation_image_datagen_args={},
         artificial_split=0., artificial_config={}, _log=None, _run=None):
-    assert sequence_type in {'cifar10', 'landkarten', 'mnist'}
+    assert sequence_type in {'landkarten'}
 
-    if sequence_type == 'cifar10':
-        X, y, X_val, y_val = datasets.keras.cifar10()
-
-        train_image_datagen = ImageDataGenerator(**train_image_datagen_args)
-        train_image_datagen.fit(X)
-        train_generator = train_image_datagen.flow(X, y, batch_size=batch_size)
-
-        val_image_datagen = ImageDataGenerator(**validation_image_datagen_args)
-        val_image_datagen.fit(X_val)
-        validation_generator = val_image_datagen.flow(X, y,
-                                                      batch_size=batch_size)
-    elif sequence_type == 'landkarten':
+    if sequence_type == 'landkarten':
         assert train_samples is not None and validation_samples is not None
         X, y = datasets.images.from_directory(dataset='landkarten',
                                               which_set='karten',
@@ -45,17 +34,6 @@ def get(sequence_type: str, batch_size: int, train_samples=None, validation_samp
         validation_generator = LandkartenSequence(
             X, y, validation_samples, batch_size,
             image_datagen_args=validation_image_datagen_args)
-    elif sequence_type == 'mnist':
-        X, y, X_val, y_val = datasets.keras.mnist()
-
-        train_image_datagen = ImageDataGenerator(**train_image_datagen_args)
-        train_image_datagen.fit(X)
-        train_generator = train_image_datagen.flow(X, y, batch_size=batch_size)
-
-        val_image_datagen = ImageDataGenerator(**validation_image_datagen_args)
-        val_image_datagen.fit(X_val)
-        validation_generator = val_image_datagen.flow(X, y,
-                                                      batch_size=batch_size)
     return train_generator, validation_generator
 
 
