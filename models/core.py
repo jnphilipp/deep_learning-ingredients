@@ -23,7 +23,7 @@ def config():
 
 @ingredient.capture
 def get(path, net_type, _log, *args, **kwargs):
-    net_types = ['autoencoder', 'cnn', 'dense', 'rnn', 'seq2seq', 'siamese']
+    net_types = ['autoencoder', 'cnn', 'dense', 'rnn', 'siamese']
     assert net_type in net_types
 
     if 'callbacks' in kwargs:
@@ -41,8 +41,6 @@ def get(path, net_type, _log, *args, **kwargs):
             model = dense.build(*args, **kwargs)
         elif net_type == 'rnn':
             model = rnn.build(*args, **kwargs)
-        elif net_type == 'seq2seq':
-            model = seq2seq.build(*args, **kwargs)
         elif net_type == 'siamese':
             model = siamese.build(*args, **kwargs)
     else:

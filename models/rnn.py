@@ -19,40 +19,33 @@ def build(N: int, merge: dict, layers: dict, optimizer: Optimizer,
           sample_weight_mode: str = None, weighted_metrics: list = None,
           target_tensors=None, *args, **kwargs) -> Model:
     if 'name' in kwargs:
-        name = kwargs['name']
-        del kwargs['name']
+        name = kwargs.pop('name')
         _log.info(f'Build RNN model [{name}]')
     else:
         name = 'rnn'
         _log.info('Build RNN model')
 
     ins, xs = inputs()
-    if ('depth' not in merge and len(xs) > 1) or \
-            ('depth' in merge and merge['depth'] == 0):
-        if 't' not in merge:
-            xs = [merge_layer(xs, t='concatenate')]
-        else:
-            xs = [merge_layer(xs)]
+    if 'depth' in merge and merge['depth'] == 0:
+        xs = [merge_layer(xs)]
 
     tensors: dict = {}
-    for j in range(N):
-        for i in range(len(xs)):
-            x = xs[i]
-
+    for i in range(N):
+        for j, x in enumerate(xs):
             rnn_layer = dict(**layers['recurrent'])
-            if j != N - 1:
+            if i != N - 1:
                 rnn_layer['config'] = dict(rnn_layer['config'],
                                            **{'return_sequences': True})
 
             if 'bidirectional' in layers and layers['bidirectional'] and \
-                    j not in tensors:
+                    i not in tensors:
                 conf = dict(layers['bidirectional'], **{'layer': rnn_layer})
-                tensors[j] = Bidirectional.from_config(conf)
-            elif j not in tensors:
+                tensors[i] = Bidirectional.from_config(conf)
+            elif i not in tensors:
                 tensors[j] = deserialize_layer(rnn_layer)
-            xs[i] = tensors[j](x)
+            xs[j] = tensors[i](x)
 
-        if 'depth' in merge and merge['depth'] == j + 1:
+        if 'depth' in merge and merge['depth'] == i + 1:
             xs = [merge_layer(xs)]
 
     # outputs

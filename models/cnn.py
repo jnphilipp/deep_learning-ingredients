@@ -13,12 +13,14 @@ from tensorflow.python.framework.ops import Tensor
 from typing import List, Union
 
 from . import ingredient
+from .inputs import inputs
+from .merge_layer import merge_layer
 from .outputs import outputs
 
 
 @ingredient.capture
-def build(grayscale: bool, rows: int, cols: int, blocks: int, layers: dict,
-          optimizer: Optimizer,  _log: Logger, connection_type: str = 'base',
+def build(blocks: int, merge: dict, layers: dict, optimizer: Optimizer,
+          _log: Logger, connection_type: str = 'base',
           loss_weights: Union[list, dict] = None,
           sample_weight_mode: str = None, weighted_metrics: list = None,
           target_tensors=None, *args, **kwargs) -> Model:
@@ -29,8 +31,7 @@ def build(grayscale: bool, rows: int, cols: int, blocks: int, layers: dict,
         connection_name = 'Densely'
 
     if 'name' in kwargs:
-        name = kwargs['name']
-        del kwargs['name']
+        name = kwargs.pop('name')
         _log.info(f'Build {connection_name}CNN model [{name}]')
     else:
         if connection_type == 'base':
@@ -39,42 +40,39 @@ def build(grayscale: bool, rows: int, cols: int, blocks: int, layers: dict,
             name = 'densely-cnn'
         _log.info(f'Build {connection_name}CNN model')
 
-    nb_filters = 1 if grayscale else 3
-    inputs = Input(shape=(rows, cols, nb_filters), name='input')
-    if 'noise' in layers and layers['noise']:
-        x = deserialize_layer(layers['noise'])(inputs)
-    else:
-        x = inputs
+    ins, xs = inputs()
+    if 'depth' in merge and merge['depth'] == 0:
+        xs = [merge_layer(xs)]
 
     if 'filters' in layers and type(layers['filters']) == list:
         assert len(layers['filters']) == blocks
 
     shortcuts: List[Tensor] = []
+    tensors: dict = {}
     for i in range(blocks):
-        filters = None
-        if 'filters' in layers:
-            if type(layers['filters']) == list:
-                filters = layers['filters'][i]
-            else:
-                filters = layers['filters']
+        for j, x in enumerate(xs):
+            filters = None
+            if 'filters' in layers:
+                if type(layers['filters']) == list:
+                    filters = layers['filters'][i]
+                else:
+                    filters = layers['filters']
 
-        x, cols, rows, nb_filters = block(x, do_pooling=i != blocks - 1,
-                                          filters=filters, cols=cols,
-                                          nb_filters=nb_filters, rows=rows,
-                                          shortcuts=shortcuts,
-                                          connection_type=connection_type)
+            x = block(x, do_pooling=i != blocks - 1, filters=filters,
+                      nb_filters=x._shape_val[-1], shortcuts=shortcuts,
+                      connection_type=connection_type)
+
+            xs[j] = x
 
     # outputs
     if 'outputs' in kwargs:
-        outs, loss, metrics = outputs(x, rows=int(rows), cols=int(cols),
-                                      shortcuts=shortcuts,
+        outs, loss, metrics = outputs(xs, shortcuts=shortcuts,
                                       outputs=kwargs['outputs'])
     else:
-        outs, loss, metrics = outputs(x, rows=int(rows), cols=int(cols),
-                                      shortcuts=shortcuts)
+        outs, loss, metrics = outputs(xs, shortcuts=shortcuts)
 
     # Model
-    model = Model(inputs=inputs, outputs=outs, name=name)
+    model = Model(inputs=ins, outputs=outs, name=name)
     model.compile(loss=loss, optimizer=optimizer, metrics=metrics,
                   loss_weights=loss_weights,
                   sample_weight_mode=sample_weight_mode,
@@ -86,7 +84,7 @@ def build(grayscale: bool, rows: int, cols: int, blocks: int, layers: dict,
 @ingredient.capture(prefix='layers')
 def layer(x: Tensor, batchnorm: dict = None, bottleneck2d: dict = None,
           conv2d: dict = {}, dropout: dict = None, filters: int = None,
-          k: int = None):
+          k: int = None) -> Tensor:
     if batchnorm is not None:
         if bottleneck2d is not None:
             bottleneck_activation = bottleneck2d['activation']
@@ -120,12 +118,12 @@ def layer(x: Tensor, batchnorm: dict = None, bottleneck2d: dict = None,
 
 
 @ingredient.capture(prefix='layers')
-def block(inputs: Tensor, N: int, cols: int, rows: int,
-          connection_type: str = 'base', do_pooling: bool = True,
-          attention2d: dict = None, batchnorm: dict = None,
-          bottleneck2d: dict = None, conv2d: dict = {}, pooling: dict = {},
-          concat_axis: int = -1, dropout: dict = None, theta: float = None,
-          filters: int = None, k: int = None, *args, **kwargs):
+def block(inputs: Tensor, N: int, connection_type: str = 'base',
+          do_pooling: bool = True, attention2d: dict = None,
+          batchnorm: dict = None, bottleneck2d: dict = None, conv2d: dict = {},
+          pooling: dict = {}, concat_axis: int = -1, dropout: dict = None,
+          theta: float = None, filters: int = None, k: int = None,
+          *args, **kwargs) -> Tensor:
     assert connection_type in ['base', 'densely']
     if connection_type == 'densely':
         assert concat_axis is not None
@@ -197,16 +195,14 @@ def block(inputs: Tensor, N: int, cols: int, rows: int,
         if dropout and dropout['t'] in ['blockwise', 'layerwise']:
             x = deserialize_layer(dropout)(x)
 
-        rows = math.ceil(rows / pooling['config']['strides'][0])
-        cols = math.ceil(cols / pooling['config']['strides'][1])
-    return x, cols, rows, nb_filters
+    return x
 
 
 @ingredient.capture(prefix='layers')
-def upblock(inputs, N, cols, rows, attention2d=None, batchnorm=None,
+def upblock(inputs: Tensor, N, cols, rows, attention2d=None, batchnorm=None,
             bottleneck2d=None, conv2d={}, conv2dt={}, dropout=None,
             do_transpose=True, concat_axis=-1,
-            theta=None, filters=None, k=None, *args, **kwargs):
+            theta=None, filters=None, k=None, *args, **kwargs) -> Tensor:
     assert connection_type in ['base', 'densely']
     if connection_type == 'densely':
         assert concat_axis
