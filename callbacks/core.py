@@ -2,7 +2,12 @@
 
 import os
 
-from tensorflow.keras.callbacks import *
+from logging import Logger
+from sacred.run import Run
+from tensorflow.keras.callbacks import (Callback, EarlyStopping,
+                                        ModelCheckpoint, ReduceLROnPlateau,
+                                        TerminateOnNaN)
+from typing import Any, Dict, List
 
 from . import ingredient, PrintSamplePrediction, WeightsLogging
 
@@ -13,9 +18,12 @@ def config():
 
 
 @ingredient.capture
-def get(earlystopping=None, modelcheckpoint=None, reducelronplateau=None,
-        printsampleprediction=None, terminateonnan=True,
-        weightslogging={'mode': 'epochs'}, _log=None, _run=None):
+def get(_log: Logger, _run: Run, earlystopping: Dict[str, Any] = None,
+        modelcheckpoint: Dict[str, Any] = None,
+        reducelronplateau: Dict[str, Any] = None,
+        printsampleprediction: Dict[str, Any] = None,
+        terminateonnan: bool = True,
+        weightslogging: Dict[str, str] = {'mode': 'epochs'}) -> List[Callback]:
     callbacks = []
 
     if terminateonnan:
