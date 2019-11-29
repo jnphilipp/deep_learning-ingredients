@@ -1,0 +1,2 @@
+tensorflow>=2.0.0
+sacred>=0.8.1
