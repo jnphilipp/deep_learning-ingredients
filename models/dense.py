@@ -19,57 +19,65 @@
 
 import math
 
+from logging import Logger
+from tensorflow.keras.layers import Dense
 from tensorflow.keras.layers import deserialize as deserialize_layer
-from tensorflow.keras.layers import Input, Dense
 from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Optimizer
+from typing import Union
 
 from . import ingredient
+from .inputs import inputs
+from .merge_layer import merge_layer
 from .outputs import outputs
 
 
 @ingredient.capture
-def build(input_shape, N, layers, optimizer, loss_weights=None,
-          sample_weight_mode=None, weighted_metrics=None, target_tensors=None,
-          _log=None, *args, **kwargs):
+def build(N: int, merge: dict, layers: dict, optimizer: Optimizer,
+          _log: Logger, loss_weights: Union[list, dict] = None,
+          sample_weight_mode: str = None, weighted_metrics: list = None,
+          target_tensors=None, *args, **kwargs) -> Model:
     if 'name' in kwargs:
-        name = kwargs['name']
-        del kwargs['name']
+        name = kwargs.pop('name')
         _log.info(f'Build Dense model [{name}]')
     else:
         name = 'dense'
         _log.info('Build Dense model')
 
-    inputs = Input(input_shape, name='input')
-    x = inputs
-
     if 'units' in layers and type(layers['units']) == list:
         assert len(layers['units']) == N
 
+    ins, xs = inputs()
+    if 'depth' in merge and merge['depth'] == 0:
+        xs = [merge_layer(xs)]
+
+    tensors: dict = {}
     for i in range(N):
-        if 'units' in layers and type(layers['units']) == list:
-            conf = dict(layers['dense_config'],
-                        **{'units': layers['units'][i]})
-        else:
-            conf = layers['dense_config']
+        for j, x in enumerate(xs):
+            conf = dict(**layers['dense'])
 
-        if 'output_shape' in kwargs and i == N - 1:
-            if type(kwargs['output_shape']) == tuple:
-                conf['units'] = kwargs['output_shape'][0]
-            else:
-                conf['units'] = kwargs['output_shape']
+            if 'output_shape' in kwargs and i == N - 1:
+                if type(kwargs['output_shape']) == tuple:
+                    conf['units'] = kwargs['output_shape'][0]
+                else:
+                    conf['units'] = kwargs['output_shape']
+            elif 'units' in layers and type(layers['units']) == list:
+                conf['units'] = layers['units'][i]
 
-        x = Dense.from_config(conf)(x)
-        if 'dropout' in layers:
-            x = deserialize_layer(layers['dropout'])(x)
+            if i not in tensors:
+                tensors[i] = Dense.from_config(conf)
+
+            xs[j] = tensors[i](x)
+            if 'dropout' in layers:
+                xs[j] = deserialize_layer(layers['dropout'])(xs[j])
 
     # outputs
-    outs, loss, metrics = outputs(x)
+    outs, loss, metrics = outputs(xs)
 
     # Model
-    model = Model(inputs=inputs, outputs=outs, name=name)
-    model.compile(loss=loss, optimizer=optimizer, metrics=metrics,
-                  loss_weights=loss_weights,
-                  sample_weight_mode=sample_weight_mode,
+    model = Model(inputs=ins, outputs=outs, name=name)
+    model.compile(loss=loss, metrics=metrics, loss_weights=loss_weights,
+                  optimizer=optimizer, sample_weight_mode=sample_weight_mode,
                   weighted_metrics=weighted_metrics,
                   target_tensors=target_tensors)
     return model
