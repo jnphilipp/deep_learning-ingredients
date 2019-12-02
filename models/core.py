@@ -20,13 +20,13 @@
 import os
 import sys
 
+from ingredients import callbacks, optimizers
 from tensorflow.keras import backend as K
 from tensorflow.keras.models import load_model
 from tensorflow.keras.utils import plot_model
 from tensorflow.python.keras.utils.layer_utils import count_params
 
-from . import autoencoder, cnn, dense, ingredient, rnn, seq2seq, siamese
-from .. import callbacks, optimizers
+from . import autoencoder, cnn, dense, ingredient, rnn, siamese
 
 
 @ingredient.config
