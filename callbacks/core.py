@@ -36,11 +36,10 @@ def config():
 
 @ingredient.capture
 def get(_log: Logger, _run: Run, earlystopping: Dict[str, Any] = None,
-        modelcheckpoint: Dict[str, Any] = None,
+        modelcheckpoint: Dict[str, Any] = None, terminateonnan: bool = True,
         reducelronplateau: Dict[str, Any] = None,
         printsampleprediction: Dict[str, Any] = None,
-        terminateonnan: bool = True,
-        weightslogging: Dict[str, str] = {'mode': 'epochs'}) -> List[Callback]:
+        weightslogging: Dict[str, str] = None) -> List[Callback]:
     callbacks = []
 
     if terminateonnan:
