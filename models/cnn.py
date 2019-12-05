@@ -19,14 +19,14 @@
 
 import math
 
+from keras.layers import concatenate, multiply
+from keras.layers import (Activation, BatchNormalization, Conv2D, Flatten,
+                          Input, Reshape)
+from keras.layers import deserialize as deserialize_layer
+from keras.models import Model
+from keras.optimizers import Optimizer
 from logging import Logger
-from tensorflow.keras.layers import concatenate, multiply
-from tensorflow.keras.layers import (Activation, BatchNormalization, Conv2D,
-                                     Flatten, Input, Reshape)
-from tensorflow.keras.layers import deserialize as deserialize_layer
-from tensorflow.keras.models import Model
-from tensorflow.keras.optimizers import Optimizer
-from tensorflow.python.framework.ops import Tensor
+from tensorflow import Tensor
 from typing import List, Union
 
 from . import ingredient
@@ -76,7 +76,7 @@ def build(blocks: int, merge: dict, layers: dict, optimizer: Optimizer,
                     filters = layers['filters']
 
             x = block(x, do_pooling=i != blocks - 1, filters=filters,
-                      nb_filters=x._shape_val[-1], shortcuts=shortcuts,
+                      nb_filters=x._keras_shape[-1], shortcuts=shortcuts,
                       connection_type=connection_type)
 
             xs[j] = x
@@ -163,7 +163,7 @@ def block(inputs: Tensor, N: int, connection_type: str = 'base',
 
     if attention2d is not None:
         w = Conv2D.from_config(dict(attention2d, **{'filters': 1}))(x)
-        w_shape = w._shape_val[1:]
+        w_shape = w._keras_shape[1:]
         w = Flatten()(w)
         w = Activation('softmax')(w)
         w = Reshape(w_shape)(w)

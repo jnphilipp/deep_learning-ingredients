@@ -18,8 +18,8 @@
 # <http://www.gnu.org/licenses/>.
 
 from logging import Logger
-from tensorflow.keras import datasets
-from tensorflow.keras.utils import to_categorical
+from keras import datasets
+from keras.utils import to_categorical
 
 from . import ingredient
 

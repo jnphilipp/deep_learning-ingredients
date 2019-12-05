@@ -18,7 +18,7 @@
 # <http://www.gnu.org/licenses/>.
 
 from csv import DictWriter
-from tensorflow.keras.callbacks import Callback
+from keras.callbacks import Callback
 
 
 class WeightsLogging(Callback):

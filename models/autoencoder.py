@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from logging import Logger
-from tensorflow.keras.layers import Input
-from tensorflow.keras.models import Model
-from tensorflow.keras.optimizers import Optimizer
-from typing import Union
+from keras.layers import Input
+from keras.models import Model
+from keras.optimizers import Optimizer
+from typing import Tuple, Union
 
 from . import ingredient
 from .. import models
@@ -15,7 +15,7 @@ def build(encoder_net_type: str, decoder_net_type: str, loss: Union[list, str],
           metrics: Union[dict, str], optimizer: Optimizer, _log: Logger,
           loss_weights: Union[list, dict] = None,
           sample_weight_mode: str = None, weighted_metrics: list = None,
-          target_tensors=None, *args, **kwargs) -> (Model, Model, Model):
+          target_tensors=None, *args, **kwargs) -> Tuple[Model, Model, Model]:
     if 'name' in kwargs:
         name = kwargs['name']
         del kwargs['name']

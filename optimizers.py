@@ -18,8 +18,8 @@
 # <http://www.gnu.org/licenses/>.
 
 from sacred import Ingredient
-from tensorflow.keras.optimizers import (Adadelta, Adagrad, Adam, Adamax,
-                                         Nadam, Optimizer, RMSprop, SGD)
+from keras.optimizers import (Adadelta, Adagrad, Adam, Adamax, Nadam,
+                              Optimizer, RMSprop, SGD)
 
 
 ingredient = Ingredient('optimizers')

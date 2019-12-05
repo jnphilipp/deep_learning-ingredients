@@ -18,10 +18,10 @@
 # <http://www.gnu.org/licenses/>.
 
 from logging import Logger
-from tensorflow.keras.layers import Bidirectional
-from tensorflow.keras.layers import deserialize as deserialize_layer
-from tensorflow.keras.models import Model
-from tensorflow.keras.optimizers import Optimizer
+from keras.layers import Bidirectional
+from keras.layers import deserialize as deserialize_layer
+from keras.models import Model
+from keras.optimizers import Optimizer
 from typing import Union
 
 from . import ingredient

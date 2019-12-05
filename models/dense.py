@@ -20,10 +20,10 @@
 import math
 
 from logging import Logger
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.layers import deserialize as deserialize_layer
-from tensorflow.keras.models import Model
-from tensorflow.keras.optimizers import Optimizer
+from keras.layers import Dense
+from keras.layers import deserialize as deserialize_layer
+from keras.models import Model
+from keras.optimizers import Optimizer
 from typing import Union
 
 from . import ingredient

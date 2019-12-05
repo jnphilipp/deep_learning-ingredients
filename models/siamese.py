@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 
 from logging import Logger
-from tensorflow.keras import backend as B
-from tensorflow.keras.layers import Input, Lambda
-from tensorflow.keras.models import Model
-from tensorflow.keras.optimizers import Optimizer
+from keras.layers import Input, Lambda
+from keras.models import Model
+from keras.optimizers import Optimizer
 from typing import Union
 
 from . import ingredient

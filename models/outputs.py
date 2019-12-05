@@ -17,13 +17,12 @@
 # along with deep_learning-ingredients. If not, see
 # <http://www.gnu.org/licenses/>.
 
-from tensorflow.keras.layers import concatenate
-from tensorflow.keras.layers import (Activation, BatchNormalization as BN,
-                                     Bidirectional, Conv1D, Conv2D,
-                                     Conv2DTranspose as Conv2DT, Dense,
-                                     Flatten, RepeatVector)
-from tensorflow.keras.layers import deserialize as deserialize_layer
-from tensorflow.python.framework.ops import Tensor
+from keras.layers import concatenate
+from keras.layers import (Activation, BatchNormalization as BN, Bidirectional,
+                          Conv1D, Conv2D, Conv2DTranspose as Conv2DT, Dense,
+                          Flatten, RepeatVector)
+from keras.layers import deserialize as deserialize_layer
+from tensorflow import Tensor
 from typing import List, Optional, Union
 
 from . import ingredient
@@ -88,7 +87,7 @@ def outputs(vecs: Union[Tensor, List[Tensor]], layers: dict,
             elif output['layer'] == 'conv2d':
                 x = Conv2D.from_config(dict(conv2d, **{
                     'filters': nb_classes,
-                    'kernel_size': v._shape_val[1:3],
+                    'kernel_size': v._keras_shape[1:3],
                     'padding': 'valid'}))(v)
                 x = Flatten()(x)
                 outs.append(Activation(activation, name=name)(x))

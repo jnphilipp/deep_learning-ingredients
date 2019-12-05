@@ -21,9 +21,8 @@ import os
 
 from logging import Logger
 from sacred.run import Run
-from tensorflow.keras.callbacks import (Callback, EarlyStopping,
-                                        ModelCheckpoint, ReduceLROnPlateau,
-                                        TerminateOnNaN)
+from keras.callbacks import (Callback, EarlyStopping, ModelCheckpoint,
+                             ReduceLROnPlateau, TerminateOnNaN)
 from typing import Any, Dict, List
 
 from . import ingredient, PrintSamplePrediction, WeightsLogging

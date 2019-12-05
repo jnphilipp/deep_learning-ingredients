@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from tensorflow.keras import backend as K
-from tensorflow.keras.layers import Input, Lambda
-from tensorflow.keras.models import Model
+from keras import backend as K
+from keras.layers import Input, Lambda
+from keras.models import Model
 
 from . import ingredient
 

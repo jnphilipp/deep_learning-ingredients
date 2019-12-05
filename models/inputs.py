@@ -17,9 +17,9 @@
 # along with deep_learning-ingredients. If not, see
 # <http://www.gnu.org/licenses/>.
 
-from tensorflow.keras.layers import Embedding, Input
-from tensorflow.keras.layers import deserialize as deserialize_layer
-from tensorflow.python.framework.ops import Tensor
+from keras.layers import Embedding, Input
+from keras.layers import deserialize as deserialize_layer
+from tensorflow import Tensor
 from typing import List, Tuple
 
 from . import ingredient

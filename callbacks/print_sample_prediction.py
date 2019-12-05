@@ -17,7 +17,7 @@
 # along with deep_learning-ingredients. If not, see
 # <http://www.gnu.org/licenses/>.
 
-from tensorflow.keras.callbacks import Callback
+from keras.callbacks import Callback
 
 
 class PrintSamplePrediction(Callback):
