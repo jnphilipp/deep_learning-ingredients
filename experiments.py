@@ -19,11 +19,15 @@
 
 import os
 
+from logging import Logger
 from sacred import Ingredient
+from sacred.run import Run
+from tensorflow.keras.models import Model
+from typing import Sequence, Union
 
-from . import PROJECT_DIR
-from . import history as history_ingredient
-from . import models as models_ingredient
+from ingredients import PROJECT_DIR
+from ingredients import history as history_ingredient
+from ingredients import models as models_ingredient
 
 
 ingredient = Ingredient('experiments',
@@ -38,14 +42,15 @@ def config():
 
 
 @ingredient.capture
-def save(models, train_history=None):
+def save(models: Union[Model, Sequence[Model]], history: dict,
+         _log: Logger, _run: Run):
+    _log.info('Saving experiment.')
+    path = _run.observers[0].run_dir
+
     try:
         for model in models:
-            models_ingredient.save(model, model.name)
-            if train_history:
-                history_ingredient.save('%s-train_history' % model.name,
-                                        train_history)
+            models_ingredient.save(model, model.name, path)
+            history_ingredient.save(f'{model.name}-train_history', history)
     except TypeError:
-        models_ingredient.save(models)
-        if train_history:
-            history_ingredient.save('train_history', train_history)
+        models_ingredient.save(models, path=path)
+        history_ingredient.save('train_history', history)
