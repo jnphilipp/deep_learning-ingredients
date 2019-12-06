@@ -20,6 +20,7 @@
 import numpy as np
 import os
 
+from logging import Logger
 from sacred import Ingredient
 from sacred.run import Run
 
@@ -28,8 +29,8 @@ ingredient = Ingredient('plots')
 
 
 @ingredient.capture
-def scatter(name: str, data: list, legend: bool = True, xlim: int = None,
-            ylim: int = None, _run: Run = None):
+def scatter(name: str, data: list, path: str, _log: Logger,
+            legend: bool = True, xlim: int = None, ylim: int = None):
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.cm
@@ -55,14 +56,15 @@ def scatter(name: str, data: list, legend: bool = True, xlim: int = None,
 
     if legend:
         ax.legend(loc=9, bbox_to_anchor=(0.5, -0.07), ncol=4)
-    fig.savefig(os.path.join(_run.observers[0].run_dir, '%s.png' % name),
+    _log.info(f'Saving {name} scatter plot to {path}.')
+    fig.savefig(os.path.join(path, f'{name}.png'),
                 format='png', bbox_inches='tight')
     plt.close()
 
 
 @ingredient.capture
-def lines(name: str, x1_data: dict, x2_data: dict = None, legend: bool = True,
-          _run: Run = None):
+def lines(name: str, x1_data: dict, path: str, _log: Logger,
+          x2_data: dict = None, legend: bool = True):
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
@@ -96,6 +98,7 @@ def lines(name: str, x1_data: dict, x2_data: dict = None, legend: bool = True,
                loc=9,
                bbox_to_anchor=(0.5, -0.07),
                ncol=4)
-    fig.savefig(os.path.join(_run.observers[0].run_dir, '%s.png' % name),
+    _log.info(f'Saving {name} lines plot to {path}.')
+    fig.savefig(os.path.join(path, f'{name}.png'),
                 format='png', bbox_inches='tight')
     plt.close()

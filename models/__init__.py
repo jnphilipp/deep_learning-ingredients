@@ -19,12 +19,10 @@
 
 from sacred import Ingredient
 
-from .. import callbacks as callbacks_ingredient
-from .. import optimizers as optimizers_ingredient
+from ingredients import optimizers as optimizers_ingredient
 
 ingredient = Ingredient('models',
-                        ingredients=[callbacks_ingredient.ingredient,
-                                     optimizers_ingredient.ingredient])
+                        ingredients=[optimizers_ingredient.ingredient])
 
 
 from .core import *

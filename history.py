@@ -24,34 +24,33 @@ from logging import Logger
 from sacred import Ingredient
 from sacred.run import Run
 
-from . import plots as plots_ingredient
+from ingredients import plots as plots_ingredient
 
 ingredient = Ingredient('history', ingredients=[plots_ingredient.ingredient])
 
 
 @ingredient.capture
-def load(name: str, _run: Run):
-    path = os.path.join(_run.observers[0].run_dir, '%s.json' % name)
-    with open(path, 'r') as f:
+def load(name: str, path: str, _log: Logger):
+    _log.info(f'Load train history [{name}]')
+    with open(os.path.join(path, f'{name}.json'), 'r', encoding='utf8') as f:
         return json.loads(f.read())
 
 
 @ingredient.capture
-def save(name: str, history: dict, _log: Logger, _run: Run):
-    _log.info('Save train history [%s]' % name)
-    path = os.path.join(_run.observers[0].run_dir, '%s.json' % name)
-    with open(path, 'w', encoding='utf8') as f:
-        f.write(json.dumps(history, indent=4))
+def save(name: str, history: dict, path: str, _log: Logger, _run: Run):
+    _log.info(f'Save train history [{name}]')
+    with open(os.path.join(path, f'{name}.json'), 'w', encoding='utf8') as f:
+        f.write(json.dumps(history, ensure_ascii=False, indent=4))
         f.write('\n')
 
 
 @ingredient.command
-def plot(name: str = 'train_history', _log: Logger = None):
-    _log.info('Plot %s' % name)
+def plot(name: str, path: str, _log: Logger):
+    _log.info(f'Plot train history [{name}].')
 
-    history = load(name)
-    x1_data = {'ylabel': 'loss', 'xlabel': 'epoch', 'lines': []}
-    x2_data = {'ylabel': 'acc', 'lines': []}
+    history = load(name, path)
+    x1_data: dict = {'ylabel': 'loss', 'xlabel': 'epoch', 'lines': []}
+    x2_data: dict = {'ylabel': 'acc', 'lines': []}
     for k in history.keys():
         if 'loss' in k:
             x1_data['lines'].append({
@@ -66,4 +65,5 @@ def plot(name: str = 'train_history', _log: Logger = None):
                 'label': k
             })
 
-    plots_ingredient.lines(name, x1_data, x2_data)
+    plots_ingredient.lines(name=name, x1_data=x1_data, x2_data=x2_data,
+                           path=path)
