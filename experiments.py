@@ -50,7 +50,8 @@ def save(models: Union[Model, Sequence[Model]], history: dict,
     try:
         for model in models:
             models_ingredient.save(model, model.name, path)
-            history_ingredient.save(f'{model.name}-train_history', history)
+            history_ingredient.save(f'{model.name}-train_history', history,
+                                    path)
     except TypeError:
         models_ingredient.save(models, path=path)
-        history_ingredient.save('train_history', history)
+        history_ingredient.save('train_history', history, path)

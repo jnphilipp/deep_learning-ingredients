@@ -23,6 +23,7 @@ import os
 from logging import Logger
 from sacred import Ingredient
 from sacred.run import Run
+from sacred.serializer import flatten
 
 from ingredients import plots as plots_ingredient
 
@@ -40,7 +41,7 @@ def load(name: str, path: str, _log: Logger):
 def save(name: str, history: dict, path: str, _log: Logger, _run: Run):
     _log.info(f'Save train history [{name}]')
     with open(os.path.join(path, f'{name}.json'), 'w', encoding='utf8') as f:
-        f.write(json.dumps(history, ensure_ascii=False, indent=4))
+        f.write(json.dumps(flatten(history), ensure_ascii=False, indent=4))
         f.write('\n')
 
 
