@@ -138,8 +138,12 @@ def outputs(vecs: Union[Tensor, List[Tensor]], layers: dict,
                     rnn_layer = dict(**layers[output['recurrent']])
                 elif 'bidirectional' in output:
                     rnn_layer = dict(**layers[output['bidirectional']])
-                else:
+                elif 'recurrent_out' in output:
                     rnn_layer = dict(**layers[output['recurrent_out']])
+                elif 'recurrent_out' in layers:
+                    rnn_layer = dict(**layers['recurrent_out'])
+                elif 'recurrent' in layers:
+                    rnn_layer = dict(**layers['recurrent'])
                 rnn_layer['config'] = dict(rnn_layer['config'], **{
                         'return_sequences': True})
 
