@@ -26,24 +26,24 @@ ingredient = Ingredient('optimizers')
 
 
 @ingredient.capture
-def get(class_name: str) -> Optimizer:
+def get(class_name: str, **kwargs) -> Optimizer:
     assert class_name.lower() in ['sgd', 'rmsprop', 'adagrad', 'adadelta',
                                   'adam', 'adamax', 'nadam']
 
     if class_name.lower() == 'sgd':
-        return sgd()
+        return sgd(**kwargs)
     elif class_name.lower() == 'rmsprop':
-        return rmsprop()
+        return rmsprop(**kwargs)
     elif class_name.lower() == 'adagrad':
-        return adagrad()
+        return adagrad(**kwargs)
     elif class_name.lower() == 'adadelta':
-        return adadelta()
+        return adadelta(**kwargs)
     elif class_name.lower() == 'adam':
-        return adam()
+        return adam(**kwargs)
     elif class_name.lower() == 'adamax':
-        return adamax()
+        return adamax(**kwargs)
     elif class_name.lower() == 'nadam':
-        return nadam()
+        return nadam(**kwargs)
 
 
 @ingredient.capture

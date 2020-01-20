@@ -42,7 +42,7 @@ def build(N: int, merge: dict, layers: dict, optimizer: Optimizer,
         name = 'rnn'
         _log.info('Build RNN model')
 
-    ins, xs = inputs()
+    ins, xs = inputs(**kwargs['inputs']) if 'inputs' in kwargs else inputs()
     if 'depth' in merge and merge['depth'] == 0:
         xs = [merge_layer(xs)]
 
@@ -66,7 +66,8 @@ def build(N: int, merge: dict, layers: dict, optimizer: Optimizer,
             xs = [merge_layer(xs)]
 
     # outputs
-    outs, loss, metrics = outputs(xs)
+    outs, loss, metrics = outputs(xs, **kwargs['outputs']) \
+        if 'outputs' in kwargs else outputs(xs)
 
     # Model
     model = Model(inputs=ins, outputs=outs, name=name)

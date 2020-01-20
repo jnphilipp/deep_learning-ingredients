@@ -31,4 +31,5 @@ def config():
     DATASETS_DIR = os.path.join(PROJECT_DIR, 'datasets')
 
 
+from . import images
 from . import keras

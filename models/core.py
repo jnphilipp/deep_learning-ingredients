@@ -20,13 +20,13 @@
 import os
 import sys
 
-from ingredients import callbacks, optimizers
-from keras import backend as K
+from ingredients import optimizers
 from keras.models import load_model, Model
 from keras.utils import plot_model
 from keras.utils.layer_utils import count_params
 from logging import Logger
-from typing import Sequence, Union
+from sacred.run import Run
+from typing import Optional, Sequence, Union
 
 from . import autoencoder, cnn, dense, ingredient, rnn, siamese
 
@@ -41,12 +41,13 @@ def config():
 
 
 @ingredient.capture
-def get(path: str, net_type: str, _log: Logger, *args, **kwargs) -> \
+def get(path: Optional[str], net_type: str, _log: Logger, *args, **kwargs) -> \
         Union[Model, Sequence[Model]]:
     net_types = ['autoencoder', 'cnn', 'dense', 'rnn', 'siamese']
     assert net_type in net_types
 
-    kwargs['optimizer'] = optimizers.get()
+    kwargs['optimizer'] = optimizers.get(**kwargs['optimizer']) \
+        if 'optimizer' in kwargs else optimizers.get()
     if not path or not os.path.exists(path):
         if net_type == 'autoencoder':
             model = autoencoder.build(*args, **kwargs)
@@ -158,19 +159,21 @@ def save(model: Model, path: str, _log: Logger, **kwargs):
 #     return K.function(inputs, outputs)
 
 
-# @ingredient.command
-# def summary(_log: Logger, model: Model = None):
-#     _log.info(f'Model summary')
-#     if model is None:
-#         model = get()
-#     model.summary()
+@ingredient.command
+def summary(_log: Logger):
+    _log.info('Print model summary.')
+    model = get()
+    model.summary()
 
 
-# @ingredient.command
-# def plot(model=None, name='model', _log=None, _run=None):
-#     _log.info(f'Plot {name}')
-#     if model is None:
-#         model = get(callbacks=False)
-#     model.summary()
-#     plot_model(model, to_file=os.path.join(_run.observers[0].run_dir,
-#                                            f'{name}.png'))
+@ingredient.command
+def plot(_log: Logger, _run: Run):
+    model = get()
+    model.summary()
+    _log.info(f'Plot {model.name}.')
+
+    if len(_run.observers) == 0:
+        path = f'{model.name}.png'
+    else:
+        path = os.path.join(_run.observers[0].run_dir, f'{model.name}.png')
+    plot_model(model, to_file=path)
