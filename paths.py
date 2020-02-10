@@ -22,10 +22,12 @@ import os
 
 from sacred import Ingredient
 
-from . import csv, images, json, keras
+
+ingredient = Ingredient('paths')
 
 
-ingredient = Ingredient('datasets', ingredients=[csv.ingredient,
-                                                 images.ingredient,
-                                                 json.ingredient,
-                                                 keras.ingredient])
+@ingredient.config
+def config():
+    project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    datasets_dir = os.path.join(project_dir, 'datasets')
+    experiment_dir = os.path.join(project_dir, 'experiments', '{name}')

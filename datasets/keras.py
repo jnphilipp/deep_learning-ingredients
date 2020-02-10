@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2019 J. Nathanael Philipp (jnphilipp) <nathanael@philipp.land>
+# Copyright (C) 2019-2020
+#               J. Nathanael Philipp (jnphilipp) <nathanael@philipp.land>
 #
 # This file is part of deep_learning-ingredients.
 #
@@ -17,15 +18,21 @@
 # along with deep_learning-ingredients. If not, see
 # <http://www.gnu.org/licenses/>.
 
-from logging import Logger
+import numpy as np
+
 from keras import datasets
 from keras.utils import to_categorical
+from logging import Logger
+from sacred import Ingredient
+from typing import Tuple
 
-from . import ingredient
+
+ingredient = Ingredient('datasets.keras')
 
 
 @ingredient.capture
-def mnist(_log: Logger):
+def mnist(_log: Logger) -> \
+        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     _log.info('Loading MNIST.')
 
     nb_classes = 10
@@ -48,7 +55,8 @@ def mnist(_log: Logger):
 
 
 @ingredient.capture
-def cifar10(_log):
+def cifar10(_log: Logger) -> \
+        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     _log.info('Loading CIFAR10.')
 
     (x_train, y_train), (x_val, y_val) = datasets.cifar10.load_data()

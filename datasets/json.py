@@ -18,14 +18,25 @@
 # along with deep_learning-ingredients. If not, see
 # <http://www.gnu.org/licenses/>.
 
-import os
+import json
 
+from logging import Logger
 from sacred import Ingredient
+from typing import Dict, List, Optional, Tuple
 
-from . import csv, images, json, keras
+from .. import paths
 
 
-ingredient = Ingredient('datasets', ingredients=[csv.ingredient,
-                                                 images.ingredient,
-                                                 json.ingredient,
-                                                 keras.ingredient])
+ingredient = Ingredient('datasets.json', ingredients=[paths.ingredient])
+
+
+@ingredient.capture
+def vocab(path: str, paths: Dict, _log: Logger) -> Dict:
+    _log.info('Load vocab from ' +
+              f'{path.format(datasets_dir=paths["datasets_dir"])}.')
+    vocab = {}
+    with open(path.format(datasets_dir=paths["datasets_dir"]), 'r',
+              encoding='utf8') as f:
+        for k, v in json.loads(f.read()).items():
+            vocab[k] = v['id'] if type(v) == dict else v
+    return vocab

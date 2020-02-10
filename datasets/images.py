@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2019 J. Nathanael Philipp (jnphilipp) <nathanael@philipp.land>
+# Copyright (C) 2019-2020
+#               J. Nathanael Philipp (jnphilipp) <nathanael@philipp.land>
 #
 # This file is part of deep_learning-ingredients.
 #
@@ -24,11 +25,14 @@ import re
 from keras.preprocessing.image import img_to_array, load_img
 from keras.utils import to_categorical
 from logging import Logger
+from sacred import Ingredient
 from scipy import ndimage
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
+from .. import paths
 
-from . import ingredient
+
+ingredient = Ingredient('datasets.images', ingredients=[paths.ingredient])
 
 
 @ingredient.capture
@@ -51,7 +55,8 @@ def load(path: str, color_mode: str = 'rgb',
 
 
 @ingredient.capture
-def from_directory(path: str, _log: Logger, mask_names: List[str] = ['mask'],
+def from_directory(path: str, paths: Dict, _log: Logger,
+                   mask_names: List[str] = ['mask'],
                    ext: Union[str, Sequence[str]] = ('jpg', 'jpeg', 'bmp',
                                                      'png', 'ppm', 'tif',
                                                      'tiff')) -> \
@@ -69,7 +74,8 @@ def from_directory(path: str, _log: Logger, mask_names: List[str] = ['mask'],
                 if os.path.exists(mask_img):
                     y[mask_name].append(load(mask_img, 'grayscale'))
 
-    _log.info(f'Loading images from {path}.')
+    _log.info(f'Loading images from ' +
+              f'{path.format(datasets_dir=paths["datasets_dir"])}.')
 
     mask_ext = tuple(f'.{mask_name}.{e}' for mask_name in mask_names
                      for e in ((ext,) if isinstance(ext, str) else ext))
@@ -78,12 +84,13 @@ def from_directory(path: str, _log: Logger, mask_names: List[str] = ['mask'],
     y: Dict[str, np.ndarray] = {mask_name: []
                                 for mask_name in mask_names + ['p']}
     nb_classes = 0
-    for e in sorted(os.scandir(path), key=lambda e: e.name):
+    for e in sorted(os.scandir(path.format(
+            datasets_dir=paths["datasets_dir"])), key=lambda e: e.name):
         if e.is_dir():
             load_images(e.path)
             nb_classes += 1
     if nb_classes == 0 and len(X) == 0:
-        load_images(path)
+        load_images(path.format(datasets_dir=paths["datasets_dir"]))
 
     samples = len(X)
     if nb_classes > 0:
