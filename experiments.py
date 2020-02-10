@@ -25,7 +25,6 @@ from sacred.run import Run
 from tensorflow.keras.models import Model
 from typing import Sequence, Union
 
-from ingredients import PROJECT_DIR
 from ingredients import history as history_ingredient
 from ingredients import models as models_ingredient
 
@@ -37,13 +36,12 @@ ingredient = Ingredient('experiments',
 
 @ingredient.config
 def config():
-    base_dir = os.path.join(PROJECT_DIR, 'experiments')
     id = None
 
 
 @ingredient.capture
-def save(models: Union[Model, Sequence[Model]], history: dict,
-         _log: Logger, _run: Run):
+def save(models: Union[Model, Sequence[Model]], history: dict, _log: Logger,
+         _run: Run):
     _log.info('Saving experiment.')
     path = _run.observers[0].run_dir
 
