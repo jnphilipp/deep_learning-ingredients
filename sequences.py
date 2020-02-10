@@ -286,7 +286,7 @@ class LandkartenSequence(Sequence):
                 mask = self.transform(mask, params)
 
                 if len(mask[np.where(mask > 0.6)]) / mask.size >= 0.02:
-                        break
+                    break
 
             bX[i] = x
             for a, k in enumerate(self.y.keys()):
