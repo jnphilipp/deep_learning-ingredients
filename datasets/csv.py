@@ -21,6 +21,7 @@
 import numpy as np
 
 from csv import DictReader
+from libdlutils import utils
 from logging import Logger
 from sacred import Ingredient
 from typing import Dict, List, Optional, Tuple
@@ -36,10 +37,11 @@ def load(path: str, fieldnames: List[Tuple[str, str, str]], paths: Dict,
          _log: Logger, vocab: Optional[Dict[str, int]] = None,
          append_one: bool = False, dtype: type = np.uint) -> \
         Tuple[Dict[str, List[np.ndarray]], Dict[str, List[np.ndarray]]]:
-    def transform(field: str, vocab: Optional[Dict[str, int]] = None) -> \
+    def transform(field: str, vocab: utils.Vocab = None) -> \
             np.ndarray:
-        return np.array([(vocab[i] if vocab else i) for i in field.split(',')
-                         if i] + ([1] if append_one else []), dtype=dtype)
+        return np.array([(vocab.get(i) if vocab else i)
+                         for i in field.split(',') if i] +
+                        ([1] if append_one else []), dtype=dtype)
 
     _log.info(f'Load {path.format(datasets_dir=paths["datasets_dir"])}.')
     x: Dict[str, List[np.ndarray]] = {field[0]: [] for field in fieldnames}

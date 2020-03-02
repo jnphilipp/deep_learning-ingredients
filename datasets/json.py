@@ -20,6 +20,7 @@
 
 import json
 
+from libdlutils import utils
 from logging import Logger
 from sacred import Ingredient
 from typing import Dict, List, Optional, Tuple
@@ -31,12 +32,17 @@ ingredient = Ingredient('datasets.json', ingredients=[paths.ingredient])
 
 
 @ingredient.capture
-def vocab(path: str, paths: Dict, _log: Logger) -> Dict:
+def load(path: str, paths: Dict, _log: Logger) -> Dict:
+    _log.info('Loading json from ' +
+              f'{path.format(datasets_dir=paths["datasets_dir"])}.')
+    with open(path.format(datasets_dir=paths["datasets_dir"]), 'r',
+              encoding='utf-8') as f:
+        return json.loads(f.read())
+
+
+@ingredient.capture
+def vocab(path: str, paths: Dict, _log: Logger) -> utils.Vocab:
     _log.info('Load vocab from ' +
               f'{path.format(datasets_dir=paths["datasets_dir"])}.')
-    vocab = {}
-    with open(path.format(datasets_dir=paths["datasets_dir"]), 'r',
-              encoding='utf8') as f:
-        for k, v in json.loads(f.read()).items():
-            vocab[k] = v['id'] if type(v) == dict else v
-    return vocab
+    return utils.Vocab.load(path.format(
+        datasets_dir=paths["datasets_dir"]))
