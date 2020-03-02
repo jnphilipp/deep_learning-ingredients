@@ -27,7 +27,8 @@ from tensorflow.keras.callbacks import (Callback, EarlyStopping,
                                         TerminateOnNaN)
 from typing import Any, Dict, List
 
-from . import ingredient, PrintSamplePrediction, WeightsLogging
+from . import (ingredient, PrintSamplePrediction, SacredMetricsLogging,
+               WeightsLogging)
 
 
 @ingredient.config
@@ -41,7 +42,9 @@ def get(_log: Logger, _run: Run, earlystopping: Dict[str, Any] = None,
         reducelronplateau: Dict[str, Any] = None,
         printsampleprediction: Dict[str, Any] = None,
         weightslogging: Dict[str, str] = None) -> List[Callback]:
-    callbacks = []
+
+    _log.info('Add SacredMetricsLogging callback.')
+    callbacks = [SacredMetricsLogging(_run)]
 
     if terminateonnan:
         _log.info('Add TerminateOnNaN callback.')

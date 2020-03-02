@@ -18,12 +18,17 @@
 # along with deep_learning-ingredients. If not, see
 # <http://www.gnu.org/licenses/>.
 
-from sacred import Ingredient
-from .print_sample_prediction import PrintSamplePrediction
-from .sacred_metrics_logging import SacredMetricsLogging
-from .weights_logging import WeightsLogging
-
-ingredient = Ingredient('callbacks')
+from sacred.run import Run
+from tensorflow.keras.callbacks import Callback
+from typing import Dict
 
 
-from .core import *
+class SacredMetricsLogging(Callback):
+    def __init__(self, run: Run):
+        super(SacredMetricsLogging, self).__init__()
+        self.run = run
+
+    def on_epoch_end(self, epoch: int, logs: Dict = None):
+        if logs:
+            for k, v in logs.items():
+                self._run.log_scalar(k, v, epoch)
