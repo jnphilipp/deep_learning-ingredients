@@ -24,16 +24,19 @@ from tensorflow.keras.layers import (Activation, BatchNormalization as BN,
                                      Conv2DTranspose as Conv2DT, Dense,
                                      Flatten, RepeatVector)
 from tensorflow.keras.layers import deserialize as deserialize_layer
+from tensorflow.keras.losses import Loss
+from tensorflow.keras.metrics import Metric
 from tensorflow.python.framework.ops import Tensor
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
-from . import ingredient
+from . import ingredient, metrics, losses
 from .merge_layer import merge_layer
 
 
 @ingredient.capture
 def outputs(vecs: Union[Tensor, List[Tensor]], layers: dict,
-            outputs: List[dict], *args, **kwargs):
+            outputs: List[dict], *args, **kwargs) -> \
+        Tuple[List[Tensor], Dict[str, Loss], Dict[str, List[Metric]]]:
     output_types = ['class', 'image', 'mask', 'seq', 'vec']
     assert set([o['t'] for o in outputs]).issubset(output_types)
 
@@ -69,16 +72,16 @@ def outputs(vecs: Union[Tensor, List[Tensor]], layers: dict,
         assert len(outputs) == len(vecs)
 
     outs = []
-    loss = []
-    metrics = {}
+    loss = {}
+    metrics_dict: Dict[str, List[Metric]] = {}
     for v, output in zip(vecs, outputs):
         activation = output['activation']
         name = output['name']
         nb_classes = output['nb_classes'] if 'nb_classes' in output else 1
 
-        loss.append(output['loss'])
+        loss[output['name']] = losses.get(output['loss'])
         if 'metrics' in output:
-            metrics[output['name']] = output['metrics']
+            metrics_dict[output['name']] = metrics.get(output['metrics'])
 
         if output['t'] == 'class':
             if output['layer'] == 'conv1d':
@@ -161,4 +164,4 @@ def outputs(vecs: Union[Tensor, List[Tensor]], layers: dict,
         elif output['t'] == 'vec':
             outs.append(v)
 
-    return outs, loss, metrics
+    return outs, loss, metrics_dict

@@ -21,8 +21,14 @@ from sacred import Ingredient
 
 from ingredients import optimizers as optimizers_ingredient
 
+from . import losses as losses_ingredient
+from . import metrics as metrics_ingredient
+
+
 ingredient = Ingredient('models',
-                        ingredients=[optimizers_ingredient.ingredient])
+                        ingredients=[losses_ingredient.ingredient,
+                                     metrics_ingredient.ingredient,
+                                     optimizers_ingredient.ingredient])
 
 
 from .core import *
