@@ -22,10 +22,11 @@ import os
 
 from sacred import Ingredient
 
-from . import csv, images, json, keras
+from . import csv, images, json, keras, nlu, texts
 
 
 ingredient = Ingredient('datasets', ingredients=[csv.ingredient,
                                                  images.ingredient,
                                                  json.ingredient,
-                                                 keras.ingredient])
+                                                 keras.ingredient,
+                                                 texts.ingredient])
