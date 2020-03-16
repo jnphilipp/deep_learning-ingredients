@@ -31,4 +31,4 @@ class SacredMetricsLogging(Callback):
     def on_epoch_end(self, epoch: int, logs: Dict = None):
         if logs:
             for k, v in logs.items():
-                self._run.log_scalar(k, v, epoch)
+                self.run.log_scalar(k, v, epoch)
