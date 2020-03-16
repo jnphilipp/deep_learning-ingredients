@@ -22,7 +22,8 @@ from logging import Logger
 from tensorflow.keras.layers import Input
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Optimizer
-from typing import Tuple, Union
+from tensorflow.python.framework.ops import Tensor
+from typing import Dict, List, Optional, Tuple, Union
 
 from . import ingredient
 from .. import models
@@ -31,9 +32,12 @@ from .. import models
 @ingredient.capture
 def build(encoder_net_type: str, decoder_net_type: str, loss: Union[list, str],
           metrics: Union[dict, str], optimizer: Optimizer, _log: Logger,
-          loss_weights: Union[list, dict] = None,
-          sample_weight_mode: str = None, weighted_metrics: list = None,
-          target_tensors=None, *args, **kwargs) -> Tuple[Model, Model, Model]:
+          loss_weights: Optional[Union[List, Dict]] = None,
+          sample_weight_mode: Optional[Union[str, Dict[str, str],
+                                             List[str]]] = None,
+          weighted_metrics: Optional[List] = None,
+          target_tensors: Optional[Union[Tensor, List[Tensor]]] = None, *args,
+          **kwargs) -> Tuple[Model, Model, Model]:
     if 'name' in kwargs:
         name = kwargs['name']
         del kwargs['name']

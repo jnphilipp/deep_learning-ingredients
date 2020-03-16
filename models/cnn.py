@@ -28,7 +28,7 @@ from tensorflow.keras.layers import deserialize as deserialize_layer
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Optimizer
 from tensorflow.python.framework.ops import Tensor
-from typing import List, Union
+from typing import Dict, List, Optional, Union
 
 from . import ingredient
 from .inputs import inputs
@@ -39,9 +39,12 @@ from .outputs import outputs
 @ingredient.capture
 def build(blocks: int, merge: dict, layers: dict, optimizer: Optimizer,
           _log: Logger, connection_type: str = 'base',
-          loss_weights: Union[list, dict] = None,
-          sample_weight_mode: str = None, weighted_metrics: list = None,
-          target_tensors=None, *args, **kwargs) -> Model:
+          loss_weights: Optional[Union[List, Dict]] = None,
+          sample_weight_mode: Optional[Union[str, Dict[str, str],
+                                             List[str]]] = None,
+          weighted_metrics: Optional[List] = None,
+          target_tensors: Optional[Union[Tensor, List[Tensor]]] = None, *args,
+          **kwargs) -> Model:
     assert connection_type in ['base', 'densely']
     if connection_type == 'base':
         connection_name = ''

@@ -135,7 +135,7 @@ def outputs(vecs: Union[Tensor, List[Tensor]], layers: dict,
                 'activation': activation}))(s))
         elif output['t'] == 'seq':
             x = RepeatVector.from_config(dict(rpvec, **{
-                'n': output['max_len']}))(v)
+                'n': output['length']}))(v)
 
             for j in range(output['N'] if 'N' in output else 1):
                 if 'recurrent' in output:
