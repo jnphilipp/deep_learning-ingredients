@@ -7,7 +7,7 @@ import os
 from logging import Logger
 from sacred import Ingredient
 from tensorflow.keras.utils import Sequence
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 from . import csv, json
 from .. import paths
@@ -24,7 +24,8 @@ class TextSequence(Sequence):
                  lead_len: Optional[int] = None,
                  text_len: Optional[int] = None,
                  total_len: Optional[int] = None, batch_size: int = 10,
-                 mode: str = 'separate', dtype: type = np.uint):
+                 sample_weights: bool = False, mode: str = 'separate',
+                 dtype: type = np.uint):
         assert len(headline) == len(lead) and len(lead) == len(text) and \
             len(text) == len(y_headline) and len(y_headline) == len(y_lead) \
             and len(y_lead) == len(y_text)
@@ -46,6 +47,7 @@ class TextSequence(Sequence):
             max([len(headline[i]) + len(lead[i]) + len(text[i])
                  for i in range(len(text))])
         self.batch_size = batch_size
+        self.sample_weights = sample_weights
         self.mode = mode
         self.dtype = dtype
 
@@ -53,7 +55,10 @@ class TextSequence(Sequence):
         return math.ceil(len(self.headline) / self.batch_size)
 
     def __getitem__(self, idx: int) -> Tuple[Dict[str, np.ndarray],
-                                             Dict[str, np.ndarray]]:
+                                             Dict[str, np.ndarray],
+                                             Union[Tuple[None],
+                                                   Tuple[None, None, None],
+                                                   Dict[str, np.ndarray]]]:
         if len(self.headline) >= (idx * self.batch_size) + self.batch_size:
             current_batch_size = self.batch_size
         else:
@@ -74,6 +79,14 @@ class TextSequence(Sequence):
                               dtype=self.dtype)
             y_text = np.zeros((current_batch_size, self.text_len),
                               dtype=self.dtype)
+            if self.sample_weights:
+                sample_weight_headline = np.zeros((current_batch_size,
+                                                   self.headline_len),
+                                                  dtype=np.uint)
+                sample_weight_lead = np.zeros((current_batch_size,
+                                               self.lead_len), dtype=np.uint)
+                sample_weight_text = np.zeros((current_batch_size,
+                                               self.text_len), dtype=np.uint)
             for i, j in enumerate(range(start_idx, end_idx)):
                 headline[i, 0:len(self.headline[j])] = self.headline[j]
                 lead[i, 0:len(self.lead[j])] = self.lead[j]
@@ -81,21 +94,43 @@ class TextSequence(Sequence):
                 y_headline[i, 0:len(self.y_headline[j])] = self.y_headline[j]
                 y_lead[i, 0:len(self.y_lead[j])] = self.y_lead[j]
                 y_text[i, 0:len(self.y_text[j])] = self.y_text[j]
+                if self.sample_weights:
+                    sample_weight_headline[i, 0:len(self.headline[j])] = 1
+                    sample_weight_lead[i, 0:len(self.lead[j])] = 1
+                    sample_weight_text[i, 0:len(self.text[j])] = 1
 
-            return {
-                'headline': headline,
-                'lead': lead,
-                'text': text,
-            }, {
-                'pheadline': y_headline,
-                'plead': y_lead,
-                'ptext': y_text
-            }
+            if self.sample_weights:
+                return {
+                    'headline': headline,
+                    'lead': lead,
+                    'text': text,
+                }, {
+                    'pheadline': y_headline,
+                    'plead': y_lead,
+                    'ptext': y_text
+                }, {
+                    'pheadline': sample_weight_headline,
+                    'plead': sample_weight_lead,
+                    'ptext': sample_weight_text
+                }
+            else:
+                return {
+                    'headline': headline,
+                    'lead': lead,
+                    'text': text
+                }, {
+                    'pheadline': y_headline,
+                    'plead': y_lead,
+                    'ptext': y_text
+                }, (None, None, None)
         elif self.mode == 'concat':
             text = np.zeros((current_batch_size, self.total_len),
                             dtype=self.dtype)
             y_text = np.zeros((current_batch_size, self.total_len),
                               dtype=self.dtype)
+            if self.sample_weights:
+                sample_weight_text = np.zeros((current_batch_size,
+                                               self.total_len), dtype=np.uint)
             for i, j in enumerate(range(start_idx, end_idx)):
                 length = len(self.headline[j]) + len(self.lead[j]) + \
                     len(self.text[j])
@@ -105,15 +140,21 @@ class TextSequence(Sequence):
                     self.text[j]
                 y_text[i, 0:y_length] = self.y_headline[j] + self.y_lead[j] + \
                     self.y_text[j]
-            return {'text': text}, {'ptext': y_text}
+                if self.sample_weights:
+                    sample_weight_text[i, 0:y_length] = 1
+            if self.sample_weights:
+                return {'text': text}, {'ptext': y_text}, \
+                    {'ptext': sample_weight_text}
+            else:
+                return {'text': text}, {'ptext': y_text}, (None,)
         else:
-            return {}, {}
+            return {}, {}, (None,)
 
 
 @ingredient.capture
 def get(dataset: str, batch_size: int, mode: str, headline_fieldname: str,
         lead_fieldname: str, text_fieldname: str, y_fieldname_prefix: str,
-        append_one: bool, dtype: type, _log: Logger,
+        append_one: bool, sample_weights: bool, dtype: type, _log: Logger,
         vocab_path: Optional[str] = None) -> Tuple[TextSequence, TextSequence]:
     assert mode in ['separate', 'concat']
 
@@ -126,14 +167,13 @@ def get(dataset: str, batch_size: int, mode: str, headline_fieldname: str,
 
     vocab = None
     if vocab_path:
-        vocab = json.vocab(os.path.join('{datasets_dir}', 'heise', dataset,
-                                        vocab_path))
+        vocab = json.vocab(os.path.join('{datasets_dir}', dataset, vocab_path))
 
-    train_csv = os.path.join('{datasets_dir}', 'heise', dataset, 'train.csv')
+    train_csv = os.path.join('{datasets_dir}', dataset, 'train.csv')
     train_x, train_y = csv.load(train_csv, fieldnames, vocab=vocab,
                                 append_one=append_one, dtype=dtype)
 
-    val_csv = os.path.join('{datasets_dir}', 'heise', dataset, 'val.csv')
+    val_csv = os.path.join('{datasets_dir}', dataset, 'val.csv')
     val_x, val_y = csv.load(val_csv, fieldnames, vocab=vocab,
                             append_one=append_one, dtype=dtype)
 
@@ -150,11 +190,16 @@ def get(dataset: str, batch_size: int, mode: str, headline_fieldname: str,
                          len(val_x['text'][i]) for i in
                          range(len(val_x['text']))]))
 
+    _log.info(f'Headline len: {headline_len}')
+    _log.info(f'Lead len: {lead_len}')
+    _log.info(f'Text len: {text_len}')
+    _log.info(f'Total len: {total_len}')
+
     return TextSequence(train_x['headline'], train_x['lead'], train_x['text'],
                         train_y['headline'], train_y['lead'], train_y['text'],
                         headline_len, lead_len, text_len, total_len,
-                        batch_size, mode, dtype), \
+                        batch_size, sample_weights, mode, dtype), \
         TextSequence(val_x['headline'], val_x['lead'], val_x['text'],
                      val_y['headline'], val_y['lead'], val_y['text'],
                      headline_len, lead_len, text_len, total_len, batch_size,
-                     mode, dtype)
+                     sample_weights, mode, dtype)
