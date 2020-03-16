@@ -34,10 +34,10 @@ ingredient = Ingredient('datasets.csv', ingredients=[paths.ingredient])
 
 @ingredient.capture
 def load(path: str, fieldnames: List[Tuple[str, str, str]], paths: Dict,
-         _log: Logger, vocab: Optional[Dict[str, int]] = None,
+         _log: Logger, vocab: Optional[utils.Vocab] = None,
          append_one: bool = False, dtype: type = np.uint) -> \
         Tuple[Dict[str, List[np.ndarray]], Dict[str, List[np.ndarray]]]:
-    def transform(field: str, vocab: utils.Vocab = None) -> \
+    def transform(field: str, vocab: Optional[utils.Vocab] = None) -> \
             np.ndarray:
         return np.array([(vocab.get(i) if vocab else i)
                          for i in field.split(',') if i] +
