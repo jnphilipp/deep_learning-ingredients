@@ -39,9 +39,14 @@ def load(path: str, fieldnames: List[Tuple[str, str, str]], paths: Dict,
         Tuple[Dict[str, List[np.ndarray]], Dict[str, List[np.ndarray]]]:
     def transform(field: str, vocab: Optional[utils.Vocab] = None) -> \
             np.ndarray:
-        return np.array([(vocab.get(i) if vocab else i)
-                         for i in field.split(',') if i] +
-                        ([1] if append_one else []), dtype=dtype)
+        if ';' in field and ',' in field:
+            return np.array([(vocab.get(j) if vocab else j)
+                             for i in field.split(';') for j in i.split(',')
+                             if j] + ([1] if append_one else []), dtype=dtype)
+        else:
+            return np.array([(vocab.get(i) if vocab else i)
+                             for i in field.split(',') if i] +
+                            ([1] if append_one else []), dtype=dtype)
 
     _log.info(f'Load {path.format(datasets_dir=paths["datasets_dir"])}.')
     x: Dict[str, List[np.ndarray]] = {field[0]: [] for field in fieldnames}
