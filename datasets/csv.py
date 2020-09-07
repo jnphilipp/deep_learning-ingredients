@@ -21,12 +21,11 @@
 import numpy as np
 
 from csv import DictReader
-from libdlutils import utils
 from logging import Logger
 from sacred import Ingredient
 from typing import Dict, List, Optional, Tuple
 
-from .. import paths
+from .. import paths, Vocab
 
 
 ingredient = Ingredient('datasets.csv', ingredients=[paths.ingredient])
@@ -34,11 +33,10 @@ ingredient = Ingredient('datasets.csv', ingredients=[paths.ingredient])
 
 @ingredient.capture
 def load(path: str, fieldnames: List[Tuple[str, str, str]], paths: Dict,
-         _log: Logger, vocab: Optional[utils.Vocab] = None,
-         append_one: bool = False, dtype: type = np.uint) -> \
-        Tuple[Dict[str, List[np.ndarray]], Dict[str, List[np.ndarray]]]:
-    def transform(field: str, vocab: Optional[utils.Vocab] = None) -> \
-            np.ndarray:
+         _log: Logger, vocab: Optional[Vocab] = None, append_one: bool = False,
+         dtype: type = np.uint) -> Tuple[Dict[str, List[np.ndarray]],
+                                         Dict[str, List[np.ndarray]]]:
+    def transform(field: str, vocab: Optional[Vocab] = None) -> np.ndarray:
         if ';' in field and ',' in field:
             return np.array([(vocab.get(j) if vocab else j)
                              for i in field.split(';') for j in i.split(',')

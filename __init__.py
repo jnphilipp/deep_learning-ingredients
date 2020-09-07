@@ -28,3 +28,4 @@ from . import models
 from . import optimizers
 from . import paths
 from . import plots
+from .vocab import Vocab
