@@ -25,7 +25,8 @@ from logging import Logger
 from sacred import Ingredient
 from typing import Dict, List, Optional, Tuple
 
-from .. import paths, Vocab
+from .. import paths
+from ..vocab import Vocab
 
 
 ingredient = Ingredient('datasets.csv', ingredients=[paths.ingredient])
