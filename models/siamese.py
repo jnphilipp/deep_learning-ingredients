@@ -13,7 +13,7 @@ from .. import models
 
 
 @ingredient.capture
-def build(inner_net_type: str, outputs: dict, optimizer: Optimizer,
+def build(inner_net_type: str, outputs: Dict, optimizer: Optimizer,
           _log: Logger, loss_weights: Optional[Union[List, Dict]] = None,
           sample_weight_mode: Optional[Union[str, Dict[str, str],
                                              List[str]]] = None,
@@ -21,12 +21,10 @@ def build(inner_net_type: str, outputs: dict, optimizer: Optimizer,
           target_tensors: Optional[Union[Tensor, List[Tensor]]] = None, *args,
           **kwargs) -> Model:
     if 'name' in kwargs:
-        name = kwargs['name']
-        del kwargs['name']
-        _log.info(f'Build Siamese [{inner_net_type}] model [{name}]')
+        name = kwargs.pop('name')
     else:
         name = 'siamese'
-        _log.info(f'Build Siamese [{inner_net_type}] model')
+    _log.info(f'Build Siamese [{inner_net_type}] model [{name}]')
 
     inner_model = models.get(None, inner_net_type,
                              outputs=[{'t': 'vec', 'loss': 'mse'}], *args,

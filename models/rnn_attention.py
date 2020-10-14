@@ -18,10 +18,9 @@
 # along with deep_learning-ingredients. If not, see
 # <http://www.gnu.org/licenses/>.
 
-import math
-
 from logging import Logger
-from tensorflow.keras.layers import Activation, BatchNormalization, Dense
+from tensorflow.keras.layers import (Bidirectional, Concatenate, Dense,
+                                     TimeDistributed)
 from tensorflow.keras.layers import deserialize as deserialize_layer
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Optimizer
@@ -44,64 +43,59 @@ def build(N: int, merge: Dict, layers: Dict, optimizer: Optimizer,
           **kwargs) -> Model:
     if 'name' in kwargs:
         name = kwargs.pop('name')
+        _log.info(f'Build RNN-Attention model [{name}]')
     else:
-        name = 'dense'
-    _log.info(f'Build Dense model [{name}]')
+        name = 'rnn'
+        _log.info('Build RNN-Attention model')
 
-    if 'units' in layers and type(layers['units']) == list:
-        assert len(layers['units']) == N
-
-    ins, xs = inputs(inputs=kwargs['inputs'], layers=layers) \
-        if 'inputs' in kwargs else inputs()
+    ins, xs = inputs(**kwargs['inputs']) if 'inputs' in kwargs else inputs()
     if 'depth' in merge and merge['depth'] == 0:
-        xs = [merge_layer(xs, t=merge['t'],
-                          config=merge['config'] if 'config' in merge else {})]
+        xs = [merge_layer(xs)]
+
+    print(ins)
+    print(xs)
 
     tensors: dict = {}
+    outs = []
     for i in range(N):
-        for j, x in enumerate(xs):
-            conf = dict(**layers['dense'])
-
-            if 'output_shape' in kwargs and i == N - 1:
-                if type(kwargs['output_shape']) == tuple:
-                    conf['units'] = kwargs['output_shape'][0]
-                else:
-                    conf['units'] = kwargs['output_shape']
-            elif 'units' in layers and type(layers['units']) == list:
-                conf['units'] = layers['units'][i]
-
-            if 'batchnorm' in layers:
-                activation = conf['activation']
-                conf['activation'] = 'linear'
-
-            if i not in tensors and 'batchnorm' in layers:
-                tensors[i] = (Dense.from_config(conf),
-                              BatchNormalization.from_config(
-                                layers['batchnorm']),
-                              Activation(activation))
+        for j, (x_in, x_out) in enumerate(xs):
+            # input
+            rnn_layer = dict(**layers['recurrent'])
+            rnn_layer['config'] = dict(rnn_layer['config'],
+                                       **{'return_sequences': True,
+                                          'return_state': True})
+            if 'bidirectional' in layers and layers['bidirectional'] and \
+                    i not in tensors:
+                conf = dict(layers['bidirectional'], **{'layer': rnn_layer})
+                tensors[i] = {'in': Bidirectional.from_config(conf)}
             elif i not in tensors:
-                tensors[i] = Dense.from_config(conf)
+                tensors[i] = {'in': deserialize_layer(rnn_layer)}
+            xs[j][0], in_fwd_state, in_back_state = tensors[i]['in'](x_in)
 
-            if 'batchnorm' in layers:
-                xs[j] = tensors[i][2](tensors[i][1](tensors[i][0](x)))
-            else:
-                xs[j] = tensors[i](x)
-            if 'dropout' in layers:
-                xs[j] = deserialize_layer(layers['dropout'])(xs[j])
+            # output
+            rnn_layer = dict(**layers['recurrent'])
+            rnn_layer['config'] = dict(rnn_layer['config'],
+                                       **{'return_sequences': True,
+                                          'return_state': True})
+            rnn_layer['config']['units'] *= 2
+            tensors[i]['out'] = deserialize_layer(rnn_layer)
+            xs[j][1], out_state = tensors[i]['out'](x_out,
+                initial_state=Concatenate(axis=-1)([in_fwd_state,
+                                                    in_back_state]))
+
+            x = deserialize_layer(**layers['attention'])([xs[j][0], xs[j][1]])
+            x = Concatenate(axis=-1)([xs[j][1], x])
+            outs.append(TimeDistributed(Dense(16, activation='softmax'))(x))
 
         if 'depth' in merge and merge['depth'] == i + 1:
-            xs = [merge_layer(xs, t=merge['t'],
-                              config=merge['config'] if 'config' in merge
-                              else {})]
-
-    # outputs
-    outs, loss, metrics = outputs(xs, outputs=kwargs['outputs'],
-                                  layers=layers) if 'outputs' in kwargs else \
-        outputs(xs)
+            xs = [merge_layer(xs)]
 
     # Model
     model = Model(inputs=ins, outputs=outs, name=name)
-    model.compile(loss=loss, metrics=metrics, loss_weights=loss_weights,
+    model.compile(loss='categorical_crossentropy', metrics=['binary_accuracy',
+                                                            'precision',
+                                                            'recall'],
+                  loss_weights=loss_weights,
                   optimizer=optimizer, sample_weight_mode=sample_weight_mode,
                   weighted_metrics=weighted_metrics,
                   target_tensors=target_tensors)

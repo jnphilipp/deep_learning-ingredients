@@ -23,13 +23,13 @@ from tensorflow.keras.layers import (add, average, concatenate, dot, maximum,
 from tensorflow.keras.layers import Embedding, Input
 from tensorflow.keras.layers import deserialize as deserialize_layer
 from tensorflow.python.framework.ops import Tensor
-from typing import Iterable
+from typing import Dict, Iterable
 
 from . import ingredient
 
 
 @ingredient.capture(prefix='merge')
-def merge_layer(inputs: Iterable[Tensor], t: str, config: dict = {}):
+def merge_layer(inputs: Iterable[Tensor], t: str, config: Dict = {}):
     if t == 'add':
         return add(inputs, **config)
     elif t == 'average':

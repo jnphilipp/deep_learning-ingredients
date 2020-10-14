@@ -34,8 +34,8 @@ from .merge_layer import merge_layer
 
 
 @ingredient.capture
-def outputs(vecs: Union[Tensor, List[Tensor]], layers: dict,
-            outputs: List[dict], *args, **kwargs) -> \
+def outputs(vecs: Union[Tensor, List[Tensor]], layers: Dict,
+            outputs: List[Dict], *args, **kwargs) -> \
         Tuple[List[Tensor], Dict[str, Loss], Dict[str, List[Metric]]]:
     output_types = ['class', 'image', 'mask', 'seq', 'vec']
     assert set([o['t'] for o in outputs]).issubset(output_types)
@@ -76,7 +76,7 @@ def outputs(vecs: Union[Tensor, List[Tensor]], layers: dict,
     metrics_dict: Dict[str, List[Metric]] = {}
     for v, output in zip(vecs, outputs):
         activation = output['activation']
-        name = output['name']
+        name = f'{output["name"]}_output'
         nb_classes = output['nb_classes'] if 'nb_classes' in output else 1
 
         loss[output['name']] = losses.get(output['loss'])

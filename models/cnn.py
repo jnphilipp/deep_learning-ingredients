@@ -53,17 +53,18 @@ def build(blocks: int, merge: dict, layers: dict, optimizer: Optimizer,
 
     if 'name' in kwargs:
         name = kwargs.pop('name')
-        _log.info(f'Build {connection_name}CNN model [{name}]')
     else:
         if connection_type == 'base':
             name = 'cnn'
         elif connection_type == 'densely':
             name = 'densely-cnn'
-        _log.info(f'Build {connection_name}CNN model')
+    _log.info(f'Build {connection_name}CNN model [{name}]')
 
-    ins, xs = inputs()
+    ins, xs = inputs(inputs=kwargs['inputs'], layers=layers) \
+        if 'inputs' in kwargs else inputs()
     if 'depth' in merge and merge['depth'] == 0:
-        xs = [merge_layer(xs)]
+        xs = [merge_layer(xs, t=merge['t'],
+                          config=merge['config'] if 'config' in merge else {})]
 
     if 'filters' in layers and type(layers['filters']) == list:
         assert len(layers['filters']) == blocks
@@ -86,11 +87,9 @@ def build(blocks: int, merge: dict, layers: dict, optimizer: Optimizer,
             xs[j] = x
 
     # outputs
-    if 'outputs' in kwargs:
-        outs, loss, metrics = outputs(xs, shortcuts=shortcuts,
-                                      outputs=kwargs['outputs'])
-    else:
-        outs, loss, metrics = outputs(xs, shortcuts=shortcuts)
+    outs, loss, metrics = outputs(xs, outputs=kwargs['outputs'],
+                                  layers=layers, shortcuts=shortcuts) \
+        if 'outputs' in kwargs else outputs(xs, shortcuts=shortcuts)
 
     # Model
     model = Model(inputs=ins, outputs=outs, name=name)

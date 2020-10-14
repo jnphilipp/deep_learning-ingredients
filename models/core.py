@@ -29,7 +29,8 @@ from tensorflow.keras.utils import plot_model
 from tensorflow.python.keras.utils.layer_utils import count_params
 from typing import Optional, Sequence, Union
 
-from . import autoencoder, cnn, dense, ingredient, rnn, siamese
+from . import (autoencoder, cnn, dense, ingredient, gan, rnn, rnn_attention,
+               siamese)
 
 
 @ingredient.config
@@ -44,7 +45,8 @@ def config():
 @ingredient.capture
 def get(path: Optional[str], net_type: str, _log: Logger, *args, **kwargs) -> \
         Union[Model, Sequence[Model]]:
-    net_types = ['autoencoder', 'cnn', 'dense', 'rnn', 'siamese']
+    net_types = ['autoencoder', 'rnn-attention', 'cnn', 'dense', 'gan', 'rnn',
+                 'siamese']
     assert net_type in net_types
 
     kwargs['optimizer'] = optimizers.get(**kwargs['optimizer']) \
@@ -56,12 +58,17 @@ def get(path: Optional[str], net_type: str, _log: Logger, *args, **kwargs) -> \
             model = cnn.build(*args, **kwargs)
         elif net_type == 'dense':
             model = dense.build(*args, **kwargs)
+        elif net_type == 'gan':
+            model = gan.build(*args, **kwargs)
         elif net_type == 'rnn':
             model = rnn.build(*args, **kwargs)
+        elif net_type == 'rnn-attention':
+            model = rnn_attention.build(*args, **kwargs)
         elif net_type == 'siamese':
             model = siamese.build(*args, **kwargs)
 
-        log_param_count(model)
+        if 'log_params' not in kwargs or kwargs['log_params']:
+            log_param_count(model)
         return model
     else:
         return load(path)
@@ -80,22 +87,26 @@ def load(path: Union[str, Sequence[str]], _log: Logger) -> \
         for p in path:
             _log.info(f'Load model [{p}]')
             models.append(load_model(p))
-            log_param_count(models[-1])
+            log_param_count(models)
         return models
 
 
 @ingredient.capture
-def log_param_count(model: Model, _log: Logger):
-    model._check_trainable_weights_consistency()
-    if hasattr(model, '_collected_trainable_weights'):
-        trainable_count = count_params(model._collected_trainable_weights)
-    else:
-        trainable_count = count_params(model.trainable_weights)
-    non_trainable_count = count_params(model.non_trainable_weights)
+def log_param_count(model: Union[Model, Sequence[Model]], _log: Logger):
+    if isinstance(model, Model):
+        model = [model]
+    for m in model:
+        if hasattr(model, '_collected_trainable_weights'):
+            m._check_trainable_weights_consistency()
+            trainable_count = count_params(m._collected_trainable_weights)
+        else:
+            trainable_count = count_params(m.trainable_weights)
+        non_trainable_count = count_params(m.non_trainable_weights)
 
-    _log.info(f'Total params: {trainable_count + non_trainable_count:,}')
-    _log.info(f'Trainable params: {trainable_count:,}')
-    _log.info(f'Non-trainable params: {non_trainable_count:,}')
+        _log.info(f'Model: {m.name}')
+        _log.info(f'  Total params: {trainable_count + non_trainable_count:,}')
+        _log.info(f'  Trainable params: {trainable_count:,}')
+        _log.info(f'  Non-trainable params: {non_trainable_count:,}')
 
 
 @ingredient.capture

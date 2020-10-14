@@ -39,12 +39,10 @@ def build(encoder_net_type: str, decoder_net_type: str, loss: Union[list, str],
           target_tensors: Optional[Union[Tensor, List[Tensor]]] = None, *args,
           **kwargs) -> Tuple[Model, Model, Model]:
     if 'name' in kwargs:
-        name = kwargs['name']
-        del kwargs['name']
-        _log.info(f'Build AutoEncoder model [{name}]')
+        name = kwargs.pop('name')
     else:
         name = 'autoencoder'
-        _log.info('Build AutoEncoder model')
+    _log.info(f'Build AutoEncoder model [{name}]')
 
     encoder = models.get(None, encoder_net_type, name='encoder',
                          outputs=[{'t': 'vec', 'loss': 'mse'}], *args,

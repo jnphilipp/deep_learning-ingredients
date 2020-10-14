@@ -42,14 +42,15 @@ def build(N: int, merge: Dict, layers: Dict, optimizer: Optimizer,
           **kwargs) -> Model:
     if 'name' in kwargs:
         name = kwargs.pop('name')
-        _log.info(f'Build RNN model [{name}]')
     else:
         name = 'rnn'
-        _log.info('Build RNN model')
+    _log.info(f'Build RNN model [{name}]')
 
-    ins, xs = inputs(**kwargs['inputs']) if 'inputs' in kwargs else inputs()
+    ins, xs = inputs(inputs=kwargs['inputs'], layers=layers) \
+        if 'inputs' in kwargs else inputs()
     if 'depth' in merge and merge['depth'] == 0:
-        xs = [merge_layer(xs)]
+        xs = [merge_layer(xs, t=merge['t'],
+                          config=merge['config'] if 'config' in merge else {})]
 
     tensors: dict = {}
     for i in range(N):
@@ -64,15 +65,18 @@ def build(N: int, merge: Dict, layers: Dict, optimizer: Optimizer,
                 conf = dict(layers['bidirectional'], **{'layer': rnn_layer})
                 tensors[i] = Bidirectional.from_config(conf)
             elif i not in tensors:
-                tensors[j] = deserialize_layer(rnn_layer)
+                tensors[i] = deserialize_layer(rnn_layer)
             xs[j] = tensors[i](x)
 
         if 'depth' in merge and merge['depth'] == i + 1:
-            xs = [merge_layer(xs)]
+            xs = [merge_layer(xs, t=merge['t'],
+                              config=merge['config'] if 'config' in merge
+                              else {})]
 
     # outputs
-    outs, loss, metrics = outputs(xs, **kwargs['outputs']) \
-        if 'outputs' in kwargs else outputs(xs)
+    outs, loss, metrics = outputs(xs, outputs=kwargs['outputs'],
+                                  layers=layers) if 'outputs' in kwargs else \
+        outputs(xs)
 
     # Model
     model = Model(inputs=ins, outputs=outs, name=name)
