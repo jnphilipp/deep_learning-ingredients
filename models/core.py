@@ -188,4 +188,4 @@ def plot(_log: Logger, _run: Run):
         path = f'{model.name}.png'
     else:
         path = os.path.join(_run.observers[0].run_dir, f'{model.name}.png')
-    plot_model(model, to_file=path)
+    plot_model(model, to_file=path, show_shapes=True, expand_nested=True)
