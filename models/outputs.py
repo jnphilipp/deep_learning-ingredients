@@ -76,12 +76,12 @@ def outputs(vecs: Union[Tensor, List[Tensor]], layers: Dict,
     metrics_dict: Dict[str, List[Metric]] = {}
     for v, output in zip(vecs, outputs):
         activation = output['activation']
-        name = f'{output["name"]}_output'
+        name = f'output_{output["name"]}'
         nb_classes = output['nb_classes'] if 'nb_classes' in output else 1
 
-        loss[output['name']] = losses.get(output['loss'])
+        loss[name] = losses.get(output['loss'])
         if 'metrics' in output:
-            metrics_dict[output['name']] = metrics.get(output['metrics'])
+            metrics_dict[name] = metrics.get(output['metrics'])
 
         if output['t'] == 'class':
             if output['layer'] == 'conv1d':

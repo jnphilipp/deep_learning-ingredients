@@ -34,10 +34,10 @@ def inputs(inputs: List[Dict], layers: Dict, *args, **kwargs) -> \
     tensors: dict = {}
     for _input in inputs:
         if _input['t'] == 'embedding' or _input['t'] == 'embedding-attention':
-            x = Input(shape=_input['shape'], name=f'{_input["name"]}_input')
+            x = Input(shape=_input['shape'], name=f'input_{_input["name"]}')
             if _input['t'] == 'embedding-attention':
                 o = Input(shape=_input['shape'],
-                          name=f'{_input["name"]}_output_input')
+                          name=f'input_output_{_input["name"]}')
                 model_inputs.append([x, o])
             else:
                 model_inputs.append(x)
@@ -64,17 +64,17 @@ def inputs(inputs: List[Dict], layers: Dict, *args, **kwargs) -> \
             else:
                 xs.append(x)
         elif _input['t'] == 'noise':
-            x = Input(shape=_input['shape'], name=f'{_input["name"]}_input')
+            x = Input(shape=_input['shape'], name=f'input_{_input["name"]}')
             model_inputs.append(x)
             xs.append(deserialize_layer(layers['noise'])(x))
         elif _input['t'] == 'input' or _input['t'] == 'input-attention':
-            x = Input(shape=_input['shape'], name=f'{_input["name"]}_input')
+            x = Input(shape=_input['shape'], name=f'input_{_input["name"]}')
             model_inputs.append(x)
             xs.append(x)
 
             if _input['t'] == 'embedding-attention':
                 x = Input(shape=_input['shape'],
-                          name=f'{_input["name"]}_output_input')
+                          name=f'input_output_{_input["name"]}')
                 model_inputs.append(x)
                 xs.append(x)
     return model_inputs, xs
