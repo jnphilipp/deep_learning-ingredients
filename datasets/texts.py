@@ -157,6 +157,10 @@ def get(dataset: str, batch_size: int, mode: str,
         for k in train_y.keys():
             _log.info(f'Y[{k}] length: {train_y[k][0]}')
 
+        _log.info(f'Train on {len(train_x[list(train_x.keys())[0]][1])} ' +
+                  'samples and validating on ' +
+                  f'{len(val_x[list(val_x.keys())[0]][1])} samples.')
+
         return TextSequence(train_x, train_y, batch_size, sample_weights,
                             mode, dtype), \
             TextSequence(val_x, val_y, batch_size, sample_weights, mode, dtype)
@@ -193,5 +197,7 @@ def get(dataset: str, batch_size: int, mode: str,
                 TextSequence(val_x, val_y, batch_size, sample_weights, mode,
                              dtype)
         else:
+            _log.info(f'Train on {len(train_x[list(train_x.keys())[0]][1])} ' +
+                      'samples.')
             return TextSequence(train_x, train_y, batch_size, sample_weights,
                                 mode, dtype)
