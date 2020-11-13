@@ -20,30 +20,32 @@ ingredient = Ingredient('datasets.texts', ingredients=[paths.ingredient])
 class TextSequence(Sequence):
     def __init__(self, X: Dict[str, Tuple[int, List[List[int]]]],
                  Y: Dict[str, Tuple[int, List[List[int]]]],
-                 batch_size: int = 10, sample_weights: bool = False,
-                 mode: str = 'separate', dtype: type = np.uint):
+                 ids: Optional[List[str]] = None, batch_size: int = 10,
+                 sample_weights: bool = False, mode: str = 'separate',
+                 dtype: type = np.uint):
         assert mode in ['separate', 'concat']
 
         self.X = X
         self.Y = Y
-        self.length = len(X[list(X.keys())[0]][1])
+        self.ids = ids
+        self.size = len(X[list(X.keys())[0]][1])
         self.batch_size = batch_size
         self.sample_weights = sample_weights
         self.mode = mode
         self.dtype = dtype
 
     def __len__(self) -> int:
-        return math.ceil(self.length / self.batch_size)
+        return math.ceil(self.size / self.batch_size)
 
     def __getitem__(self, idx: int) -> Union[Tuple[Dict[str, np.ndarray],
                                                    Dict[str, np.ndarray]],
                                              Tuple[Dict[str, np.ndarray],
                                                    Dict[str, np.ndarray],
                                                    Dict[str, np.ndarray]]]:
-        if self.length >= (idx * self.batch_size) + self.batch_size:
+        if self.size >= (idx * self.batch_size) + self.batch_size:
             current_batch_size = self.batch_size
         else:
-            current_batch_size = self.length - (idx * self.batch_size)
+            current_batch_size = self.size - (idx * self.batch_size)
         start_idx = idx * self.batch_size
         end_idx = start_idx + current_batch_size
 
@@ -120,9 +122,9 @@ def get(dataset: str, batch_size: int, mode: str,
         vocab = json.vocab(os.path.join('{datasets_dir}', dataset, vocab_path))
 
     train_csv = os.path.join('{datasets_dir}', dataset, 'train.csv')
-    tx, ty = csv.load(train_csv, x_fieldnames, y_fieldnames, vocab=vocab,
-                      x_append_one=x_append_one, y_append_one=y_append_one,
-                      dtype=dtype)
+    tids, tx, ty = csv.load(train_csv, x_fieldnames, y_fieldnames, vocab=vocab,
+                            x_append_one=x_append_one,
+                            y_append_one=y_append_one, dtype=dtype)
     train_x = {}
     for k in tx.keys():
         max_len = max([len(i) for i in tx[k]])
@@ -136,9 +138,9 @@ def get(dataset: str, batch_size: int, mode: str,
 
     val_csv = os.path.join('{datasets_dir}', dataset, 'val.csv')
     if os.path.exists(val_csv):
-        vx, vy = csv.load(val_csv, x_fieldnames, y_fieldnames, vocab=vocab,
-                          x_append_one=x_append_one, y_append_one=y_append_one,
-                          dtype=dtype)
+        vids, vx, vy = csv.load(val_csv, x_fieldnames, y_fieldnames,
+                                vocab=vocab, x_append_one=x_append_one,
+                                y_append_one=y_append_one, dtype=dtype)
         val_x = {}
         for k in tx.keys():
             max_len = max(train_x[k][0], max([len(i) for i in tx[k]]))
@@ -161,9 +163,10 @@ def get(dataset: str, batch_size: int, mode: str,
                   'samples and validating on ' +
                   f'{len(val_x[list(val_x.keys())[0]][1])} samples.')
 
-        return TextSequence(train_x, train_y, batch_size, sample_weights,
+        return TextSequence(train_x, train_y, tids, batch_size, sample_weights,
                             mode, dtype), \
-            TextSequence(val_x, val_y, batch_size, sample_weights, mode, dtype)
+            TextSequence(val_x, val_y, vids, batch_size, sample_weights, mode,
+                         dtype)
     else:
         for k in train_x.keys():
             _log.info(f'X[{k}] length: {train_x[k][0]}')
@@ -175,6 +178,11 @@ def get(dataset: str, batch_size: int, mode: str,
             length = len(train_x[list(train_x.keys())[0]][1])
             per = rng.permutation(length)
             idx = int(length * (1. - validation_split))
+
+            vids = []
+            for i in sorted(per[idx:], reverse=True):
+                vids.append(tids[i])
+                del tids[i]
 
             _log.info(f'Making validation split, train on {idx} samples and ' +
                       f'validating on {length - idx} samples.')
@@ -192,12 +200,12 @@ def get(dataset: str, batch_size: int, mode: str,
                 train_y[k] = (train_y[k][0],
                               [train_y[k][1][i] for i in per[0:idx]])
 
-            return TextSequence(train_x, train_y, batch_size, sample_weights,
-                                mode, dtype), \
-                TextSequence(val_x, val_y, batch_size, sample_weights, mode,
-                             dtype)
+            return TextSequence(train_x, train_y, tids, batch_size,
+                                sample_weights, mode, dtype), \
+                TextSequence(val_x, val_y, vids, batch_size, sample_weights,
+                             mode, dtype)
         else:
-            _log.info(f'Train on {len(train_x[list(train_x.keys())[0]][1])} ' +
+            _log.info(f'Run on {len(train_x[list(train_x.keys())[0]][1])} ' +
                       'samples.')
-            return TextSequence(train_x, train_y, batch_size, sample_weights,
-                                mode, dtype)
+            return TextSequence(train_x, train_y, tids, batch_size,
+                                sample_weights, mode, dtype)
