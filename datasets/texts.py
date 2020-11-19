@@ -19,7 +19,7 @@ ingredient = Ingredient('datasets.texts', ingredients=[paths.ingredient])
 
 class TextSequence(Sequence):
     def __init__(self, X: Dict[str, Tuple[int, List[List[int]]]],
-                 Y: Dict[str, Tuple[int, List[List[int]]]],
+                 Y: Dict[str, Tuple[int, List[List[int]]]], rnd: np.random.RandomState,
                  ids: Optional[List[str]] = None, batch_size: int = 10,
                  sample_weights: bool = False, mode: str = 'separate',
                  dtype: type = np.uint):
@@ -32,7 +32,12 @@ class TextSequence(Sequence):
         self.batch_size = batch_size
         self.sample_weights = sample_weights
         self.mode = mode
+        self.rnd = rnd
         self.dtype = dtype
+        self.on_epoch_end()
+
+    def on_epoch_end(self):
+        self.index_array = self.rnd.permutation(self.size)
 
     def __len__(self) -> int:
         return math.ceil(self.size / self.batch_size)
@@ -67,12 +72,14 @@ class TextSequence(Sequence):
 
             for i, j in enumerate(range(start_idx, end_idx)):
                 for k in self.X.keys():
-                    bx[k][i, 0:len(self.X[k][1][j])] = self.X[k][1][j]
+                    bx[k][i, 0:len(self.X[k][1][self.index_array[j]])] = \
+                        self.X[k][1][self.index_array[j]]
                 for k in self.Y.keys():
-                    by[k][i, 0:len(self.Y[k][1][j])] = self.Y[k][1][j]
+                    by[k][i, 0:len(self.Y[k][1][self.index_array[j]])] = \
+                        self.Y[k][1][self.index_array[j]]
                 if self.sample_weights:
                     for k in self.X.keys():
-                        bw[k][i, 0:len(self.X[k][1][j])] = 1
+                        bw[k][i, 0:len(self.X[k][1][self.index_array[j]])] = 1
 
             if self.sample_weights:
                 return bx, by, bw
@@ -90,10 +97,13 @@ class TextSequence(Sequence):
                               sum([v[0] for v in self.X.values()])),
                              dtype=np.uint)
             for i, j in enumerate(range(start_idx, end_idx)):
-                length = sum([len(v[1][j]) for v in self.X.values()])
-                y_length = sum([len(v[1][j]) for v in self.Y.values()])
-                x[i, 0:length] = list(chain(v[1][j] for v in self.X.values()))
-                y[i, 0:length] = list(chain(v[1][j] for v in self.Y.values()))
+                length = sum([len(v[1][self.index_array[j]]) for v in self.X.values()])
+                y_length = sum([len(v[1][self.index_array[j]])
+                               for v in self.Y.values()])
+                x[i, 0:length] = list(chain(v[1][self.index_array[j]]
+                                            for v in self.X.values()))
+                y[i, 0:y_length] = list(chain(v[1][self.index_array[j]]
+                                              for v in self.Y.values()))
                 if self.sample_weights:
                     w[i, 0:length] = 1
             if self.sample_weights:
@@ -109,6 +119,7 @@ def get(dataset: str, batch_size: int, mode: str,
         x_fieldnames: Union[str, List[str]],
         y_fieldnames: Union[str, List[str]], x_append_one: bool,
         y_append_one: bool, sample_weights: bool, dtype: type, _log: Logger,
+        _rnd: np.random.RandomState,
         validation_split: Optional[float] = None,
         vocab_path: Optional[str] = None) -> Union[TextSequence,
                                                    Tuple[TextSequence,
@@ -174,9 +185,8 @@ def get(dataset: str, batch_size: int, mode: str,
             _log.info(f'Y[{k}] length: {train_y[k][0]}')
 
         if validation_split:
-            rng = np.random.default_rng()
             length = len(train_x[list(train_x.keys())[0]][1])
-            per = rng.permutation(length)
+            per = _rnd.permutation(length)
             idx = int(length * (1. - validation_split))
 
             vids = []
@@ -200,12 +210,12 @@ def get(dataset: str, batch_size: int, mode: str,
                 train_y[k] = (train_y[k][0],
                               [train_y[k][1][i] for i in per[0:idx]])
 
-            return TextSequence(train_x, train_y, tids, batch_size,
+            return TextSequence(train_x, train_y, _rnd, tids, batch_size,
                                 sample_weights, mode, dtype), \
-                TextSequence(val_x, val_y, vids, batch_size, sample_weights,
+                TextSequence(val_x, val_y, _rnd, vids, batch_size, sample_weights,
                              mode, dtype)
         else:
             _log.info(f'Run on {len(train_x[list(train_x.keys())[0]][1])} ' +
                       'samples.')
-            return TextSequence(train_x, train_y, tids, batch_size,
+            return TextSequence(train_x, train_y, _rnd, tids, batch_size,
                                 sample_weights, mode, dtype)
