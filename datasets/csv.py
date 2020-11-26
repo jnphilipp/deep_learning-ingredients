@@ -33,42 +33,60 @@ ingredient = Ingredient('datasets.csv', ingredients=[paths.ingredient])
 
 
 @ingredient.capture
-def load(path: str, x_fieldnames: Union[str, List[str]],
-         y_fieldnames: Union[str, List[str]], paths: Dict, _log: Logger,
-         id_fieldname: Optional[str] = 'id', vocab: Optional[Vocab] = None,
-         x_append_one: bool = True, y_append_one: bool = False,
-         dtype: type = np.uint) -> Tuple[List[str],
-                                         Dict[str, List[np.ndarray]],
-                                         Dict[str, List[np.ndarray]]]:
-    def transform(field: str, append_one: bool,
-                  vocab: Optional[Vocab] = None) -> np.ndarray:
+def load(
+    path: str,
+    x_fieldnames: Union[str, List[str]],
+    y_fieldnames: Union[str, List[str]],
+    paths: Dict,
+    _log: Logger,
+    id_fieldname: Optional[str] = 'id',
+    vocab: Optional[Vocab] = None,
+    x_append_one: bool = True,
+    y_append_one: bool = False,
+    dtype: type = np.uint,
+) -> Tuple[List[str], Dict[str, List[np.ndarray]], Dict[str, List[np.ndarray]]]:
+    def transform(
+        field: str, append_one: bool, vocab: Optional[Vocab] = None
+    ) -> np.ndarray:
         if ';' in field and ',' in field:
-            return np.array([(vocab.get(j) if vocab else j)
-                             for i in field.split(';') for j in i.split(',')
-                             if j] + ([1] if append_one else []), dtype=dtype)
+            return np.array(
+                [
+                    (vocab.get(j) if vocab else j)
+                    for i in field.split(';')
+                    for j in i.split(',')
+                    if j
+                ]
+                + ([1] if append_one else []),
+                dtype=dtype,
+            )
         else:
-            return np.array([(vocab.get(i) if vocab else i)
-                             for i in field.split(',') if i] +
-                            ([1] if append_one else []), dtype=dtype)
+            return np.array(
+                [(vocab.get(i) if vocab else i) for i in field.split(',') if i]
+                + ([1] if append_one else []),
+                dtype=dtype,
+            )
 
     if type(x_fieldnames) == str:
         x_fieldnames = [x_fieldnames]
     if type(y_fieldnames) == str:
         y_fieldnames = [y_fieldnames]
 
-    _log.info(f'Load {path.format(datasets_dir=paths["datasets_dir"])}.')
+    _log.info(f"Load {path.format(datasets_dir=paths['datasets_dir'])}.")
     ids = []
     x: Dict[str, List[np.ndarray]] = {k: [] for k in x_fieldnames}
     y: Dict[str, List[np.ndarray]] = {k: [] for k in y_fieldnames}
-    with open(path.format(datasets_dir=paths['datasets_dir']), 'r',
-              encoding='utf8') as f:
+    with open(
+        path.format(datasets_dir=paths['datasets_dir']), 'r', encoding='utf8'
+    ) as f:
         reader = DictReader(f, dialect='unix')
         for row in reader:
             if id_fieldname and id_fieldname in row:
                 ids.append(row[id_fieldname])
             for field in x_fieldnames:
-                x[field].append(transform(row[field], x_append_one, vocab))
+                if field in row:
+                    x[field].append(transform(row[field], x_append_one, vocab))
             for field in y_fieldnames:
-                y[field].append(transform(row[field], y_append_one, vocab))
+                if field in row:
+                    y[field].append(transform(row[field], y_append_one, vocab))
 
     return ids, x, y
