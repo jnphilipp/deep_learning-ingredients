@@ -27,10 +27,10 @@ from sacred.run import Run
 from tensorflow.keras.models import load_model, Model
 from tensorflow.keras.utils import plot_model
 from tensorflow.python.keras.utils.layer_utils import count_params
-from typing import Optional, Sequence, Union
+from tensorflow.saved_model import SaveOptions
+from typing import Callable, Dict, Optional, Sequence, Union
 
-from . import (autoencoder, cnn, dense, ingredient, gan, rnn, rnn_attention,
-               siamese)
+from . import autoencoder, cnn, dense, ingredient, gan, rnn, rnn_attention, siamese
 
 
 @ingredient.config
@@ -110,7 +110,10 @@ def log_param_count(model: Union[Model, Sequence[Model]], _log: Logger):
 
 
 @ingredient.capture
-def save(model: Model, path: str, _log: Logger, **kwargs):
+def save(model: Model, path: str, _log: Logger, overwrite: bool = True,
+         include_optimizer: bool = True, save_format: Optional[str] = None,
+         signatures: Optional[Union[Callable, Dict[str, Callable]]] = None,
+         options: SaveOptions = None, **kwargs):
     if 'name' in kwargs:
         name = kwargs.pop('name')
     else:
@@ -122,53 +125,19 @@ def save(model: Model, path: str, _log: Logger, **kwargs):
         f.write('\n')
 
     stdout = sys.stdout
-    with open(os.path.join(path, f'{name}_summary'), 'w',
-              encoding='utf8') as f:
+    with open(os.path.join(path, f'{name}_summary'), 'w', encoding='utf8') as f:
         sys.stdout = f
         model.summary()
     sys.stdout = stdout
 
-    model.save(os.path.join(path, f'{name}.h5'))
-
-
-# @ingredient.capture
-# def make_function(model: Model, input_layers: Sequence[str],
-#                   output_layers: Sequence[str], _log: Logger):
-#     _log.info('Make function')
-
-#     def get_layer(config):
-#         if 'name' in layer:
-#             return model.get_layer(layer['name'])
-#         elif 'idx' in layer:
-#             return model.get_layer(index=layer['idx'])
-#         elif 'index' in layer:
-#             return model.get_layer(index=layer['index'])
-#         else:
-#             return None
-
-#     inputs = []
-#     for layer in input_layers:
-#         if 'at' in layer:
-#             inputs.append(get_layer(layer).get_input_at(layer['at']))
-#         elif 'node_idx' in layer:
-#             inputs.append(get_layer(layer).get_input_at(layer['node_idx']))
-#         elif 'node_index' in layer:
-#             inputs.append(get_layer(layer).get_input_at(layer['node_index']))
-#         else:
-#             inputs.append(get_layer(layer).input)
-#     inputs.append(K.learning_phase())
-
-#     outputs = []
-#     for layer in output_layers:
-#         if 'at' in layer:
-#             outputs.append(get_layer(layer).get_output_at(layer['at']))
-#         elif 'node_idx' in layer:
-#             outputs.append(get_layer(layer).get_output_at(layer['node_idx']))
-#         elif 'node_index' in layer:
-#             outputs.append(get_layer(layer).get_output_at(layer['node_index']))
-#         else:
-#             outputs.append(get_layer(layer).output)
-#     return K.function(inputs, outputs)
+    model.save(
+        os.path.join(path, name),
+        overwrite,
+        include_optimizer,
+        save_format,
+        signatures,
+        options,
+    )
 
 
 @ingredient.command
