@@ -125,7 +125,7 @@ def save(model: Model, path: str, _log: Logger, overwrite: bool = True,
         f.write('\n')
 
     stdout = sys.stdout
-    with open(os.path.join(path, f'{name}_summary'), 'w', encoding='utf8') as f:
+    with open(os.path.join(path, f'{name}.summary'), 'w', encoding='utf8') as f:
         sys.stdout = f
         model.summary()
     sys.stdout = stdout
