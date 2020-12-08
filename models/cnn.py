@@ -23,7 +23,7 @@ import math
 from logging import Logger
 from tensorflow.keras.layers import concatenate, multiply
 from tensorflow.keras.layers import (Activation, BatchNormalization, Conv2D,
-                                     Flatten, Input, Reshape)
+                                     Conv2DTranspose, Flatten, Reshape)
 from tensorflow.keras.layers import deserialize as deserialize_layer
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Optimizer
@@ -37,7 +37,7 @@ from .outputs import outputs
 
 
 @ingredient.capture
-def build(blocks: int, merge: dict, layers: dict, optimizer: Optimizer,
+def build(blocks: int, merge: Optional[Dict], layers: Dict, optimizer: Optimizer,
           _log: Logger, connection_type: str = 'base',
           loss_weights: Optional[Union[List, Dict]] = None,
           sample_weight_mode: Optional[Union[str, Dict[str, str],
@@ -62,7 +62,7 @@ def build(blocks: int, merge: dict, layers: dict, optimizer: Optimizer,
 
     ins, xs = inputs(inputs=kwargs['inputs'], layers=layers) \
         if 'inputs' in kwargs else inputs()
-    if 'depth' in merge and merge['depth'] == 0:
+    if merge is not None and 'depth' in merge and merge['depth'] == 0:
         xs = [merge_layer(xs, t=merge['t'],
                           config=merge['config'] if 'config' in merge else {})]
 

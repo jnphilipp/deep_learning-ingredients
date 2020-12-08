@@ -18,8 +18,6 @@
 # along with deep_learning-ingredients. If not, see
 # <http://www.gnu.org/licenses/>.
 
-import math
-
 from logging import Logger
 from tensorflow.keras.layers import Activation, BatchNormalization, Dense
 from tensorflow.keras.layers import deserialize as deserialize_layer
@@ -35,7 +33,7 @@ from .outputs import outputs
 
 
 @ingredient.capture
-def build(N: int, merge: Dict, layers: Dict, optimizer: Optimizer,
+def build(N: int, merge: Optional[Dict], layers: Dict, optimizer: Optimizer,
           _log: Logger, loss_weights: Optional[Union[List, Dict]] = None,
           sample_weight_mode: Optional[Union[str, Dict[str, str],
                                              List[str]]] = None,
@@ -53,7 +51,7 @@ def build(N: int, merge: Dict, layers: Dict, optimizer: Optimizer,
 
     ins, xs = inputs(inputs=kwargs['inputs'], layers=layers) \
         if 'inputs' in kwargs else inputs()
-    if 'depth' in merge and merge['depth'] == 0:
+    if merge is not None and 'depth' in merge and merge['depth'] == 0:
         xs = [merge_layer(xs, t=merge['t'],
                           config=merge['config'] if 'config' in merge else {})]
 
@@ -89,7 +87,7 @@ def build(N: int, merge: Dict, layers: Dict, optimizer: Optimizer,
             if 'dropout' in layers:
                 xs[j] = deserialize_layer(layers['dropout'])(xs[j])
 
-        if 'depth' in merge and merge['depth'] == i + 1:
+        if merge is not None and 'depth' in merge and merge['depth'] == i + 1:
             xs = [merge_layer(xs, t=merge['t'],
                               config=merge['config'] if 'config' in merge
                               else {})]

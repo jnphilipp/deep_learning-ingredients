@@ -33,10 +33,9 @@ from .outputs import outputs
 
 
 @ingredient.capture
-def build(N: int, merge: Dict, layers: Dict, optimizer: Optimizer,
+def build(N: int, merge: Optional[Dict], layers: Dict, optimizer: Optimizer,
           _log: Logger, loss_weights: Optional[Union[List, Dict]] = None,
-          sample_weight_mode: Optional[Union[str, Dict[str, str],
-                                             List[str]]] = None,
+          sample_weight_mode: Optional[Union[str, Dict[str, str], List[str]]] = None,
           weighted_metrics: Optional[List] = None,
           target_tensors: Optional[Union[Tensor, List[Tensor]]] = None, *args,
           **kwargs) -> Model:
@@ -48,7 +47,7 @@ def build(N: int, merge: Dict, layers: Dict, optimizer: Optimizer,
 
     ins, xs = inputs(inputs=kwargs['inputs'], layers=layers) \
         if 'inputs' in kwargs else inputs()
-    if 'depth' in merge and merge['depth'] == 0:
+    if merge is not None and 'depth' in merge and merge['depth'] == 0:
         xs = [merge_layer(xs, t=merge['t'],
                           config=merge['config'] if 'config' in merge else {})]
 
@@ -68,7 +67,7 @@ def build(N: int, merge: Dict, layers: Dict, optimizer: Optimizer,
                 tensors[i] = deserialize_layer(rnn_layer)
             xs[j] = tensors[i](x)
 
-        if 'depth' in merge and merge['depth'] == i + 1:
+        if merge is not None and 'depth' in merge and merge['depth'] == i + 1:
             xs = [merge_layer(xs, t=merge['t'],
                               config=merge['config'] if 'config' in merge
                               else {})]

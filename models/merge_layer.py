@@ -18,10 +18,8 @@
 # along with deep_learning-ingredients. If not, see
 # <http://www.gnu.org/licenses/>.
 
-from tensorflow.keras.layers import (add, average, concatenate, dot, maximum,
-                                     minimum, multiply, subtract)
-from tensorflow.keras.layers import Embedding, Input
-from tensorflow.keras.layers import deserialize as deserialize_layer
+from tensorflow.keras.layers import (add, average, concatenate, dot, maximum, minimum,
+                                     multiply, subtract)
 from tensorflow.python.framework.ops import Tensor
 from typing import Dict, Iterable
 

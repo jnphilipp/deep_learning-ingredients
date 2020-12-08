@@ -34,7 +34,7 @@ from .outputs import outputs
 
 
 @ingredient.capture
-def build(N: int, merge: Dict, layers: Dict, optimizer: Optimizer,
+def build(N: int, merge: Optional[Dict], layers: Dict, optimizer: Optimizer,
           _log: Logger, loss_weights: Optional[Union[List, Dict]] = None,
           sample_weight_mode: Optional[Union[str, Dict[str, str],
                                              List[str]]] = None,
@@ -49,7 +49,7 @@ def build(N: int, merge: Dict, layers: Dict, optimizer: Optimizer,
         _log.info('Build RNN-Attention model')
 
     ins, xs = inputs(**kwargs['inputs']) if 'inputs' in kwargs else inputs()
-    if 'depth' in merge and merge['depth'] == 0:
+    if merge is not None and 'depth' in merge and merge['depth'] == 0:
         xs = [merge_layer(xs)]
 
     print(ins)
@@ -80,14 +80,14 @@ def build(N: int, merge: Dict, layers: Dict, optimizer: Optimizer,
             rnn_layer['config']['units'] *= 2
             tensors[i]['out'] = deserialize_layer(rnn_layer)
             xs[j][1], out_state = tensors[i]['out'](x_out,
-                initial_state=Concatenate(axis=-1)([in_fwd_state,
+              initial_state=Concatenate(axis=-1)([in_fwd_state,
                                                     in_back_state]))
 
             x = deserialize_layer(**layers['attention'])([xs[j][0], xs[j][1]])
             x = Concatenate(axis=-1)([xs[j][1], x])
             outs.append(TimeDistributed(Dense(16, activation='softmax'))(x))
 
-        if 'depth' in merge and merge['depth'] == i + 1:
+        if merge is not None and 'depth' in merge and merge['depth'] == i + 1:
             xs = [merge_layer(xs)]
 
     # Model
