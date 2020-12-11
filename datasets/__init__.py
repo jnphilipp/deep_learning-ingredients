@@ -17,16 +17,20 @@
 # You should have received a copy of the GNU General Public License
 # along with deep_learning-ingredients. If not, see
 # <http://www.gnu.org/licenses/>.
-
-import os
+"""Datasets ingredients."""
 
 from sacred import Ingredient
 
-from . import csv, images, json, keras, nlu, texts
+from . import csv, images, json, keras, texts
 
 
-ingredient = Ingredient('datasets', ingredients=[csv.ingredient,
-                                                 images.ingredient,
-                                                 json.ingredient,
-                                                 keras.ingredient,
-                                                 texts.ingredient])
+ingredient = Ingredient(
+    'datasets',
+    ingredients=[
+        csv.ingredient,
+        images.ingredient,
+        json.ingredient,
+        keras.ingredient,
+        texts.ingredient,
+    ],
+)
