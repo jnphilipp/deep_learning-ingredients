@@ -76,16 +76,16 @@ class TextSequence(Sequence):
 
             for i, j in enumerate(range(start_idx, end_idx)):
                 for k in self.X.keys():
-                    bx[k][i, 0 : len(self.X[k][1][self.index_array[j]])] = self.X[k][1][
+                    bx[k][i, 0: len(self.X[k][1][self.index_array[j]])] = self.X[k][1][
                         self.index_array[j]
                     ]
                 for k in self.Y.keys():
-                    by[k][i, 0 : len(self.Y[k][1][self.index_array[j]])] = self.Y[k][1][
+                    by[k][i, 0: len(self.Y[k][1][self.index_array[j]])] = self.Y[k][1][
                         self.index_array[j]
                     ]
                 if self.sample_weights:
                     for k in self.X.keys():
-                        bw[k][i, 0 : len(self.X[k][1][self.index_array[j]])] = 1
+                        bw[k][i, 0: len(self.X[k][1][self.index_array[j]])] = 1
 
             if self.sample_weights:
                 return bx, by, bw
@@ -137,6 +137,7 @@ def get(
     y_append_one: bool,
     sample_weights: bool,
     dtype: type,
+    paths: Dict,
     _log: Logger,
     _rnd: np.random.RandomState,
     validation_split: Optional[float] = None,
@@ -172,7 +173,9 @@ def get(
             max_len = max([len(i) for i in ty[k]])
             train_y[k if k.startswith('output_') else f'output_{k}'] = (max_len, ty[k])
 
-    val_csv = os.path.join('{datasets_dir}', dataset, 'val.csv')
+    val_csv = os.path.join('{datasets_dir}', dataset, 'val.csv').format(
+        datasets_dir=paths['datasets_dir']
+    )
     if os.path.exists(val_csv):
         vids, vx, vy = csv.load(
             val_csv,
@@ -185,14 +188,16 @@ def get(
         )
         val_x = {}
         for k in tx.keys():
-            max_len = max(train_x[k][0], max([len(i) for i in tx[k]]))
-            train_x[k] = (max_len, train_x[k][1])
-            val_x[k if k.startswith('input_') else f'input_{k}'] = (max_len, vx[k])
+            xk = k if k.startswith('input_') else f'input_{k}'
+            max_len = max(train_x[xk][0], max([len(i) for i in vx[k]]))
+            train_x[xk] = (max_len, train_x[xk][1])
+            val_x[xk] = (max_len, vx[k])
         val_y = {}
         for k in ty.keys():
-            max_len = max(train_y[k][0], max([len(i) for i in ty[k]]))
-            train_y[k] = (max_len, train_y[k][1])
-            val_y[k if k.startswith('output_') else f'output_{k}'] = (max_len, vy[k])
+            yk = k if k.startswith('output_') else f'output_{k}'
+            max_len = max(train_y[yk][0], max([len(i) for i in vy[k]]))
+            train_y[yk] = (max_len, train_y[yk][1])
+            val_y[yk] = (max_len, vy[k])
 
         for k in train_x.keys():
             _log.info(f"X[{k}] length: {train_x[k][0]}")
@@ -206,9 +211,11 @@ def get(
 
         return (
             TextSequence(
-                train_x, train_y, tids, batch_size, sample_weights, mode, dtype
+                train_x, train_y, _rnd, tids, batch_size, sample_weights, mode, dtype
             ),
-            TextSequence(val_x, val_y, vids, batch_size, sample_weights, mode, dtype),
+            TextSequence(
+                val_x, val_y, _rnd, vids, batch_size, sample_weights, mode, dtype
+            ),
         )
     else:
         for k in train_x.keys():
