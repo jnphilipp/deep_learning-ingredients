@@ -30,4 +30,3 @@ ingredient = Ingredient('paths')
 def config():
     project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     datasets_dir = os.path.join(project_dir, 'datasets')
-    experiment_dir = os.path.join(project_dir, 'experiments', '{name}')

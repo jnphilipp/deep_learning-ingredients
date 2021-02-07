@@ -31,7 +31,6 @@ from tensorflow.keras.losses import (BinaryCrossentropy,
                                      MeanSquaredLogarithmicError, Poisson,
                                      Reduction, SparseCategoricalCrossentropy,
                                      SquaredHinge)
-from typing import List
 
 
 ingredient = Ingredient('models.losses')
@@ -52,19 +51,16 @@ def get(class_name: str, _log: Logger, **kwargs) -> Loss:
     elif class_name.lower() == 'huber':
         return huber(**kwargs)
     elif class_name.lower() == 'kullback_leibler_divergence' or \
-            class_name.lower() == 'kldivergence' or \
-            class_name.lower() == 'kld':
+            class_name.lower() == 'kldivergence' or class_name.lower() == 'kld':
         return kullback_leibler_divergence(**kwargs)
     elif class_name.lower() == 'logcosh':
         return logcosh(**kwargs)
-    elif class_name.lower() == 'mean_absolute_error' or \
-            class_name.lower() == 'mae':
+    elif class_name.lower() == 'mean_absolute_error' or class_name.lower() == 'mae':
         return mean_absolute_error(**kwargs)
     elif class_name.lower() == 'mean_absolute_percentage_error' or \
             class_name.lower() == 'mape':
         return mean_absolute_percentage_error(**kwargs)
-    elif class_name.lower() == 'mean_squared_error' or \
-            class_name.lower() == 'mse':
+    elif class_name.lower() == 'mean_squared_error' or class_name.lower() == 'mse':
         return mean_squared_error(**kwargs)
     elif class_name.lower() == 'mean_squared_logarithmic_error' or \
             class_name.lower() == 'msle':
