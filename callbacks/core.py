@@ -16,11 +16,12 @@
 # You should have received a copy of the GNU General Public License
 # along with deep_learning-ingredients. If not, see
 # <http://www.gnu.org/licenses/>.
+"""Core modul of callbacks ingredient."""
 
 import os
 
 from logging import Logger
-from sacred.run import Ingredient
+from sacred import Ingredient
 from sacred.run import Run
 from tensorflow.keras.callbacks import (
     Callback,
@@ -40,7 +41,7 @@ ingredient = Ingredient("callbacks")
 
 
 @ingredient.config
-def config():
+def _config():
     terminateonnan = True
 
 
@@ -55,7 +56,7 @@ def get(
     printsampleprediction: Dict[str, Any] = None,
     weightslogging: Dict[str, str] = None,
 ) -> List[Callback]:
-
+    """Get callback list based on config."""
     _log.info("Add SacredMetricsLogging callback.")
     callbacks = [SacredMetricsLogging(_run)]
 
