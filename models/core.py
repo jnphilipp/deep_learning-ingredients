@@ -22,7 +22,6 @@ import sys
 
 from ingredients import optimizers
 from logging import Logger
-from sacred import Ingredient
 from sacred.run import Run
 from tensorflow.keras.models import load_model, Model
 from tensorflow.keras.utils import plot_model
@@ -30,12 +29,8 @@ from tensorflow.python.keras.utils.layer_utils import count_params
 from tensorflow.saved_model import SaveOptions
 from typing import Callable, Dict, Optional, Sequence, Union
 
-from . import autoencoder, cnn, dense, gan, rnn, rnn_attention, siamese, losses, metrics
-
-
-ingredient = Ingredient(
-    "models", ingredients=[losses.ingredient, metrics.ingredient, optimizers.ingredient]
-)
+from . import autoencoder, cnn, dense, gan, rnn, rnn_attention, siamese
+from .ingredient import ingredient
 
 
 @ingredient.config

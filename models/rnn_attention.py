@@ -25,7 +25,7 @@ from tensorflow.keras.optimizers import Optimizer
 from tensorflow.python.framework.ops import Tensor
 from typing import Dict, List, Optional, Union
 
-from .core import ingredient
+from .ingredient import ingredient
 from .inputs import inputs
 from .merge_layer import merge_layer
 

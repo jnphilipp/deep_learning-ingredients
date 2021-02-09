@@ -36,7 +36,7 @@ from tensorflow.python.framework.ops import Tensor
 from typing import Dict, List, Optional, Tuple, Union
 
 from . import metrics, losses
-from .core import ingredient
+from .ingredient import ingredient
 from .merge_layer import merge_layer
 
 

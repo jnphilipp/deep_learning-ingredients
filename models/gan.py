@@ -24,7 +24,8 @@ from tensorflow.keras.optimizers import Optimizer
 from tensorflow.python.framework.ops import Tensor
 from typing import Dict, List, Optional, Sequence, Union
 
-from .core import get, ingredient
+from . import core
+from .ingredient import ingredient
 
 
 @ingredient.capture
@@ -59,12 +60,12 @@ def build(
             + f'{discriminator_net["net_type"]}] model [{name}]'
         )
 
-    generator = get(None, name="generator", log_params=False, **generator_net)
-    discriminator = get(
+    generator = core.get(None, name="generator", log_params=False, **generator_net)
+    discriminator = core.get(
         None, name="discriminator", log_params=False, **discriminator_net
     )
     if encoder_net:
-        encoder = get(None, name="encoder", log_params=False, **encoder_net)
+        encoder = core.get(None, name="encoder", log_params=False, **encoder_net)
 
     discriminator.trainable = False
     if encoder_net:

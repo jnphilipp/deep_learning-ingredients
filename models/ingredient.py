@@ -17,27 +17,12 @@
 # along with deep_learning-ingredients. If not, see
 # <http://www.gnu.org/licenses/>.
 
-from .ingredient import ingredient
-from .core import get, load, log_param_count, save, summary, plot
+from ingredients import optimizers
+from sacred import Ingredient
 
-# from . import autoencoder
-from . import cnn
-from . import dense
+from . import losses, metrics
 
-# from . import gan
-from . import rnn
 
-# from . import siamese
-
-__all__ = (
-    "ingredient",
-    "get",
-    "load",
-    "log_param_count",
-    "save",
-    "summary",
-    "plot",
-    "cnn",
-    "dense",
-    "rnn",
+ingredient = Ingredient(
+    "models", ingredients=[losses.ingredient, metrics.ingredient, optimizers.ingredient]
 )

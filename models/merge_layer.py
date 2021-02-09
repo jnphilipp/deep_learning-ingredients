@@ -30,7 +30,7 @@ from tensorflow.keras.layers import (
 from tensorflow.python.framework.ops import Tensor
 from typing import Dict, Iterable
 
-from .core import ingredient
+from .ingredient import ingredient
 
 
 @ingredient.capture(prefix="merge")

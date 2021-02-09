@@ -24,7 +24,8 @@ from tensorflow.keras.optimizers import Optimizer
 from tensorflow.python.framework.ops import Tensor
 from typing import Dict, List, Optional, Tuple, Union
 
-from .core import ingredient, get
+from . import core
+from .ingredient import ingredient
 
 
 @ingredient.capture
@@ -48,7 +49,7 @@ def build(
         name = "autoencoder"
     _log.info(f"Build AutoEncoder model [{name}]")
 
-    encoder = get(
+    encoder = core.get(
         None,
         encoder_net_type,
         name="encoder",
@@ -57,7 +58,7 @@ def build(
         **kwargs,
     )
     output_shape = encoder.get_layer("input").input_shape[1]
-    decoder = get(
+    decoder = core.get(
         None,
         decoder_net_type,
         name="decoder",

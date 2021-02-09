@@ -26,7 +26,8 @@ from tensorflow.keras.optimizers import Optimizer
 from tensorflow.python.framework.ops import Tensor
 from typing import Dict, List, Optional, Union
 
-from .core import get, ingredient
+from . import core
+from .ingredient import ingredient
 
 
 @ingredient.capture
@@ -48,7 +49,7 @@ def build(
         name = "siamese"
     _log.info(f"Build Siamese [{inner_net_type}] model [{name}]")
 
-    inner_model = get(
+    inner_model = core.get(
         None, inner_net_type, outputs=[{"t": "vec", "loss": "mse"}], *args, **kwargs
     )
 

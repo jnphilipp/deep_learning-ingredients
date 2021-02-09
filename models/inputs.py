@@ -22,7 +22,7 @@ from tensorflow.keras.layers import deserialize as deserialize_layer
 from tensorflow.python.framework.ops import Tensor
 from typing import Dict, List, Tuple
 
-from .core import ingredient
+from .ingredient import ingredient
 
 
 @ingredient.capture
