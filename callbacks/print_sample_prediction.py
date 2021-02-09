@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2019-2020
-#               J. Nathanael Philipp (jnphilipp) <nathanael@philipp.land>
+# Copyright (C) 2019-2021 J. Nathanael Philipp (jnphilipp) <nathanael@philipp.land>
 #
 # This file is part of deep_learning-ingredients.
 #
@@ -32,19 +31,19 @@ class PrintSamplePrediction(Callback):
         if len(v.shape) == 1:
             return self.translate_func([int(v.argmax())])
         else:
-            return self.translate_func([l for l in v.argmax(axis=1)])
+            return self.translate_func([i for i in v.argmax(axis=1)])
 
     def on_epoch_end(self, epoch, logs=None):
         p = self.model.predict(self.X)
 
-        print('\r', end='')
+        print("\r", end="")
         for i in range(len(self.X)):
             if type(self.y) == list:
                 outs = []
                 ys = []
                 for j in range(len(self.y)):
                     outs.append(self.trans_output(p[j][i]))
-                    ys.append(self.trans_output(y[j][i]))
+                    ys.append(self.trans_output(self.y[j][i]))
             else:
                 outs = [self.trans_output(p[i])]
                 ys = [self.trans_output(self.y[i])]

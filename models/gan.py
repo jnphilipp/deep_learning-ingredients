@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2019-2020
-#               J. Nathanael Philipp (jnphilipp) <nathanael@philipp.land>
+# Copyright (C) 2019-2021 J. Nathanael Philipp (jnphilipp) <nathanael@philipp.land>
 #
 # This file is part of deep_learning-ingredients.
 #
@@ -25,39 +24,47 @@ from tensorflow.keras.optimizers import Optimizer
 from tensorflow.python.framework.ops import Tensor
 from typing import Dict, List, Optional, Sequence, Union
 
-from . import core
-from . import ingredient
+from .core import get, ingredient
 
 
 @ingredient.capture
-def build(generator_net: Dict, discriminator_net: Dict, loss: Union[str, List],
-          metrics: Union[str, List, Dict], optimizer: Optimizer, _log: Logger,
-          encoder_net: Optional[Dict] = None,
-          loss_weights: Optional[Union[List, Dict]] = None,
-          sample_weight_mode: Optional[Union[str, Dict[str, str],
-                                             List[str]]] = None,
-          weighted_metrics: Optional[List] = None,
-          target_tensors: Optional[Union[Tensor, List[Tensor]]] = None, *args,
-          **kwargs) -> Union[Sequence[Model]]:
-    if 'name' in kwargs:
-        name = kwargs.pop('name')
+def build(
+    generator_net: Dict,
+    discriminator_net: Dict,
+    loss: Union[str, List],
+    metrics: Union[str, List, Dict],
+    optimizer: Optimizer,
+    _log: Logger,
+    encoder_net: Optional[Dict] = None,
+    loss_weights: Optional[Union[List, Dict]] = None,
+    sample_weight_mode: Optional[Union[str, Dict[str, str], List[str]]] = None,
+    weighted_metrics: Optional[List] = None,
+    target_tensors: Optional[Union[Tensor, List[Tensor]]] = None,
+    *args,
+    **kwargs,
+) -> Union[Sequence[Model]]:
+    if "name" in kwargs:
+        name = kwargs.pop("name")
     else:
-        name = 'gan'
+        name = "gan"
     if encoder_net is None:
-        _log.info(f'Build GAN [{generator_net["net_type"]}/' +
-                  f'{discriminator_net["net_type"]}] model [{name}]')
+        _log.info(
+            f'Build GAN [{generator_net["net_type"]}/'
+            + f'{discriminator_net["net_type"]}] model [{name}]'
+        )
     else:
-        _log.info(f'Build GAN [({encoder_net["net_type"]},' +
-                  f'{generator_net["net_type"]})/' +
-                  f'{discriminator_net["net_type"]}] model [{name}]')
+        _log.info(
+            f'Build GAN [({encoder_net["net_type"]},'
+            + f'{generator_net["net_type"]})/'
+            + f'{discriminator_net["net_type"]}] model [{name}]'
+        )
 
-    generator = core.get(None,  name='generator', log_params=False,
-                         **generator_net)
-    discriminator = core.get(None,  name='discriminator', log_params=False,
-                             **discriminator_net)
+    generator = get(None, name="generator", log_params=False, **generator_net)
+    discriminator = get(
+        None, name="discriminator", log_params=False, **discriminator_net
+    )
     if encoder_net:
-        encoder = core.get(None,  name='encoder', log_params=False,
-                           **encoder_net)
+        encoder = get(None, name="encoder", log_params=False, **encoder_net)
 
     discriminator.trainable = False
     if encoder_net:
@@ -75,13 +82,18 @@ def build(generator_net: Dict, discriminator_net: Dict, loss: Union[str, List],
 
         outputs = discriminator([generator_out, encoder_out])
 
-        combined = Model(inputs=generator_inputs + encoder_inputs,
-                         outputs=outputs, name=name)
-        combined.compile(loss=loss, metrics=metrics, loss_weights=loss_weights,
-                         optimizer=optimizer,
-                         sample_weight_mode=sample_weight_mode,
-                         weighted_metrics=weighted_metrics,
-                         target_tensors=target_tensors)
+        combined = Model(
+            inputs=generator_inputs + encoder_inputs, outputs=outputs, name=name
+        )
+        combined.compile(
+            loss=loss,
+            metrics=metrics,
+            loss_weights=loss_weights,
+            optimizer=optimizer,
+            sample_weight_mode=sample_weight_mode,
+            weighted_metrics=weighted_metrics,
+            target_tensors=target_tensors,
+        )
 
         return generator, encoder, discriminator, combined
     else:
@@ -94,9 +106,13 @@ def build(generator_net: Dict, discriminator_net: Dict, loss: Union[str, List],
         outputs = discriminator(generator_out)
 
         combined = Model(inputs=inputs, outputs=outputs, name=name)
-        combined.compile(loss=loss, metrics=metrics, loss_weights=loss_weights,
-                         optimizer=optimizer,
-                         sample_weight_mode=sample_weight_mode,
-                         weighted_metrics=weighted_metrics,
-                         target_tensors=target_tensors)
+        combined.compile(
+            loss=loss,
+            metrics=metrics,
+            loss_weights=loss_weights,
+            optimizer=optimizer,
+            sample_weight_mode=sample_weight_mode,
+            weighted_metrics=weighted_metrics,
+            target_tensors=target_tensors,
+        )
         return generator, discriminator, combined

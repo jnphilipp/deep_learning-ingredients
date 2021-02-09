@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2019-2020
-#               J. Nathanael Philipp (jnphilipp) <nathanael@philipp.land>
+# Copyright (C) 2019-2021 J. Nathanael Philipp (jnphilipp) <nathanael@philipp.land>
 #
 # This file is part of deep_learning-ingredients.
 #
@@ -23,6 +22,7 @@ import sys
 
 from ingredients import optimizers
 from logging import Logger
+from sacred import Ingredient
 from sacred.run import Run
 from tensorflow.keras.models import load_model, Model
 from tensorflow.keras.utils import plot_model
@@ -30,7 +30,12 @@ from tensorflow.python.keras.utils.layer_utils import count_params
 from tensorflow.saved_model import SaveOptions
 from typing import Callable, Dict, Optional, Sequence, Union
 
-from . import autoencoder, cnn, dense, ingredient, gan, rnn, rnn_attention, siamese
+from . import autoencoder, cnn, dense, gan, rnn, rnn_attention, siamese, losses, metrics
+
+
+ingredient = Ingredient(
+    "models", ingredients=[losses.ingredient, metrics.ingredient, optimizers.ingredient]
+)
 
 
 @ingredient.config
@@ -43,31 +48,42 @@ def config():
 
 
 @ingredient.capture
-def get(path: Optional[str], net_type: str, _log: Logger, *args, **kwargs) -> \
-        Union[Model, Sequence[Model]]:
-    net_types = ['autoencoder', 'rnn-attention', 'cnn', 'dense', 'gan', 'rnn',
-                 'siamese']
+def get(
+    path: Optional[str], net_type: str, _log: Logger, *args, **kwargs
+) -> Union[Model, Sequence[Model]]:
+    net_types = [
+        "autoencoder",
+        "rnn-attention",
+        "cnn",
+        "dense",
+        "gan",
+        "rnn",
+        "siamese",
+    ]
     assert net_type in net_types
 
-    kwargs['optimizer'] = optimizers.get(**kwargs['optimizer']) \
-        if 'optimizer' in kwargs else optimizers.get()
+    kwargs["optimizer"] = (
+        optimizers.get(**kwargs["optimizer"])
+        if "optimizer" in kwargs
+        else optimizers.get()
+    )
     if not path or not os.path.exists(path):
-        if net_type == 'autoencoder':
+        if net_type == "autoencoder":
             model = autoencoder.build(*args, **kwargs)
-        elif net_type == 'cnn':
+        elif net_type == "cnn":
             model = cnn.build(*args, **kwargs)
-        elif net_type == 'dense':
+        elif net_type == "dense":
             model = dense.build(*args, **kwargs)
-        elif net_type == 'gan':
+        elif net_type == "gan":
             model = gan.build(*args, **kwargs)
-        elif net_type == 'rnn':
+        elif net_type == "rnn":
             model = rnn.build(*args, **kwargs)
-        elif net_type == 'rnn-attention':
+        elif net_type == "rnn-attention":
             model = rnn_attention.build(*args, **kwargs)
-        elif net_type == 'siamese':
+        elif net_type == "siamese":
             model = siamese.build(*args, **kwargs)
 
-        if 'log_params' not in kwargs or kwargs['log_params']:
+        if "log_params" not in kwargs or kwargs["log_params"]:
             log_param_count(model)
         return model
     else:
@@ -75,17 +91,18 @@ def get(path: Optional[str], net_type: str, _log: Logger, *args, **kwargs) -> \
 
 
 @ingredient.capture
-def load(path: Union[str, Sequence[str]], _log: Logger) -> \
-        Union[Model, Sequence[Model]]:
+def load(
+    path: Union[str, Sequence[str]], _log: Logger
+) -> Union[Model, Sequence[Model]]:
     if path is None:
-        _log.critical('No path given to load model.')
+        _log.critical("No path given to load model.")
     elif isinstance(path, str):
-        _log.info(f'Load model [{path}]')
+        _log.info(f"Load model [{path}]")
         return load_model(path)
     else:
         models = []
         for p in path:
-            _log.info(f'Load model [{p}]')
+            _log.info(f"Load model [{p}]")
             models.append(load_model(p))
             log_param_count(models)
         return models
@@ -96,36 +113,43 @@ def log_param_count(model: Union[Model, Sequence[Model]], _log: Logger):
     if isinstance(model, Model):
         model = [model]
     for m in model:
-        if hasattr(model, '_collected_trainable_weights'):
+        if hasattr(model, "_collected_trainable_weights"):
             m._check_trainable_weights_consistency()
             trainable_count = count_params(m._collected_trainable_weights)
         else:
             trainable_count = count_params(m.trainable_weights)
         non_trainable_count = count_params(m.non_trainable_weights)
 
-        _log.info(f'Model: {m.name}')
-        _log.info(f'  Total params: {trainable_count + non_trainable_count:,}')
-        _log.info(f'  Trainable params: {trainable_count:,}')
-        _log.info(f'  Non-trainable params: {non_trainable_count:,}')
+        _log.info(f"Model: {m.name}")
+        _log.info(f"  Total params: {trainable_count + non_trainable_count:,}")
+        _log.info(f"  Trainable params: {trainable_count:,}")
+        _log.info(f"  Non-trainable params: {non_trainable_count:,}")
 
 
 @ingredient.capture
-def save(model: Model, path: str, _log: Logger, overwrite: bool = True,
-         include_optimizer: bool = True, save_format: Optional[str] = None,
-         signatures: Optional[Union[Callable, Dict[str, Callable]]] = None,
-         options: SaveOptions = None, **kwargs):
-    if 'name' in kwargs:
-        name = kwargs.pop('name')
+def save(
+    model: Model,
+    path: str,
+    _log: Logger,
+    overwrite: bool = True,
+    include_optimizer: bool = True,
+    save_format: Optional[str] = None,
+    signatures: Optional[Union[Callable, Dict[str, Callable]]] = None,
+    options: SaveOptions = None,
+    **kwargs,
+):
+    if "name" in kwargs:
+        name = kwargs.pop("name")
     else:
-        name = 'model'
+        name = "model"
 
-    _log.info(f'Save model [{name}]')
-    with open(os.path.join(path, f'{name}.json'), 'w', encoding='utf8') as f:
+    _log.info(f"Save model [{name}]")
+    with open(os.path.join(path, f"{name}.json"), "w", encoding="utf8") as f:
         f.write(model.to_json())
-        f.write('\n')
+        f.write("\n")
 
     stdout = sys.stdout
-    with open(os.path.join(path, f'{name}.summary'), 'w', encoding='utf8') as f:
+    with open(os.path.join(path, f"{name}.summary"), "w", encoding="utf8") as f:
         sys.stdout = f
         model.summary()
     sys.stdout = stdout
@@ -142,7 +166,7 @@ def save(model: Model, path: str, _log: Logger, overwrite: bool = True,
 
 @ingredient.command
 def summary(_log: Logger):
-    _log.info('Print model summary.')
+    _log.info("Print model summary.")
     model = get()
     model.summary()
 
@@ -151,10 +175,10 @@ def summary(_log: Logger):
 def plot(_log: Logger, _run: Run):
     model = get()
     model.summary()
-    _log.info(f'Plot {model.name}.')
+    _log.info(f"Plot {model.name}.")
 
     if len(_run.observers) == 0:
-        path = f'{model.name}.png'
+        path = f"{model.name}.png"
     else:
-        path = os.path.join(_run.observers[0].run_dir, f'{model.name}.png')
+        path = os.path.join(_run.observers[0].run_dir, f"{model.name}.png")
     plot_model(model, to_file=path, show_shapes=True, expand_nested=True)

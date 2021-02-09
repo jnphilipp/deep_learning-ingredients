@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2019-2020
-#               J. Nathanael Philipp (jnphilipp) <nathanael@philipp.land>
+# Copyright (C) 2019-2021 J. Nathanael Philipp (jnphilipp) <nathanael@philipp.land>
 #
 # This file is part of deep_learning-ingredients.
 #
@@ -18,29 +17,37 @@
 # along with deep_learning-ingredients. If not, see
 # <http://www.gnu.org/licenses/>.
 
-from tensorflow.keras.layers import (add, average, concatenate, dot, maximum, minimum,
-                                     multiply, subtract)
+from tensorflow.keras.layers import (
+    add,
+    average,
+    concatenate,
+    dot,
+    maximum,
+    minimum,
+    multiply,
+    subtract,
+)
 from tensorflow.python.framework.ops import Tensor
 from typing import Dict, Iterable
 
-from . import ingredient
+from .core import ingredient
 
 
-@ingredient.capture(prefix='merge')
+@ingredient.capture(prefix="merge")
 def merge_layer(inputs: Iterable[Tensor], t: str, config: Dict = {}):
-    if t == 'add':
+    if t == "add":
         return add(inputs, **config)
-    elif t == 'average':
+    elif t == "average":
         return average(inputs, **config)
-    elif t == 'concatenate':
+    elif t == "concatenate":
         return concatenate(inputs, **config)
-    elif t == 'dot':
+    elif t == "dot":
         return dot(inputs, **config)
-    elif t == 'maximum':
+    elif t == "maximum":
         return maximum(inputs, **config)
-    elif t == 'minimum':
+    elif t == "minimum":
         return minimum(inputs, **config)
-    elif t == 'multiply':
+    elif t == "multiply":
         return multiply(inputs, **config)
-    elif t == 'subtract':
+    elif t == "subtract":
         return subtract(inputs, **config)

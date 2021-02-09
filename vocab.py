@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2019-2020
-#               J. Nathanael Philipp (jnphilipp) <nathanael@philipp.land>
+# Copyright (C) 2019-2021 J. Nathanael Philipp (jnphilipp) <nathanael@philipp.land>
 #
 # This file is part of deep_learning-ingredients.
 #
@@ -20,7 +19,7 @@
 
 import json
 
-from typing import Dict, List, Optional, Union
+from typing import Dict, List
 
 
 class Vocab:
@@ -47,27 +46,27 @@ class Vocab:
         return self._rvalues[k]
 
     def translate(self, text: str) -> List[int]:
-        s = ''
+        s = ""
         translated: List[int] = []
         for c in text:
             if c in self._values.keys():
-                if s != '':
+                if s != "":
                     for i in range(len(s)):
                         translated.append(len(self))
-                    s = ''
+                    s = ""
                 translated.append(self.get(c))
             else:
                 s += c
                 if s in self._values.keys():
                     translated.append(self.get(c))
-                    s = ''
-        if s != '':
+                    s = ""
+        if s != "":
             for i in range(len(s)):
                 translated.append(len(self))
         return translated
 
-    def rtranslate(self, text: List[int], out_of_vocab_sign: str = '') -> str:
-        translated = ''
+    def rtranslate(self, text: List[int], out_of_vocab_sign: str = "") -> str:
+        translated = ""
         for c in text:
             if c in self._rvalues.keys():
                 translated += self._rvalues[c]
@@ -76,14 +75,17 @@ class Vocab:
         return translated
 
     @classmethod
-    def load(cls, path: str) -> 'Vocab':
+    def load(cls, path: str) -> "Vocab":
         min_idx = None
         data: Dict[str, int] = {}
         rdata: Dict[int, str] = {}
-        with open(path, 'r', encoding='utf8') as f:
+        with open(path, "r", encoding="utf8") as f:
             for k, v in json.loads(f.read()).items():
-                idx = v['id'] if isinstance(v, dict) else int(v)
-                min_idx = idx if min_idx is None else min(min_idx, idx)
+                idx = v["id"] if isinstance(v, dict) else int(v)
+                if min_idx is None:
+                    min_idx = idx
+                else:
+                    min_idx = min(min_idx, idx)
                 data[k] = idx
                 rdata[idx] = k
         v = cls(0 if min_idx is None else min_idx)

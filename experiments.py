@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2019-2020
-#               J. Nathanael Philipp (jnphilipp) <nathanael@philipp.land>
+# Copyright (C) 2019-2021 J. Nathanael Philipp (jnphilipp) <nathanael@philipp.land>
 #
 # This file is part of deep_learning-ingredients.
 #
@@ -18,39 +17,36 @@
 # along with deep_learning-ingredients. If not, see
 # <http://www.gnu.org/licenses/>.
 
-import os
-
 from logging import Logger
 from sacred import Ingredient
 from sacred.run import Run
 from tensorflow.keras.models import Model
-from typing import Sequence, Union
+from typing import Dict, Sequence, Union
 
 from ingredients import history as history_ingredient
 from ingredients import models as models_ingredient
 
 
-ingredient = Ingredient('experiments',
-                        ingredients=[history_ingredient.ingredient,
-                                     models_ingredient.ingredient])
-
-
-@ingredient.config
-def config():
-    id = None
+ingredient = Ingredient(
+    "experiments",
+    ingredients=[history_ingredient.ingredient, models_ingredient.ingredient],
+)
 
 
 @ingredient.capture
-def save(models: Union[Model, Sequence[Model]], history: dict, _log: Logger,
-         _run: Run):
-    _log.info('Saving experiment.')
-    path = _run.observers[0].run_dir
+def save(
+    path: str,
+    models: Union[Model, Sequence[Model]],
+    history: Dict,
+    _log: Logger,
+    _run: Run,
+):
+    _log.info("Saving experiment.")
 
     try:
         for model in models:
             models_ingredient.save(model, model.name, path)
-            history_ingredient.save(f'{model.name}-train_history', history,
-                                    path)
+            history_ingredient.save(f"{model.name}-train_history", history, path)
     except TypeError:
         models_ingredient.save(models, path=path)
-        history_ingredient.save('train_history', history, path)
+        history_ingredient.save("train_history", history, path)

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2019-2020
-#               J. Nathanael Philipp (jnphilipp) <nathanael@philipp.land>
+# Copyright (C) 2019-2021 J. Nathanael Philipp (jnphilipp) <nathanael@philipp.land>
 #
 # This file is part of deep_learning-ingredients.
 #
@@ -19,47 +18,60 @@
 # <http://www.gnu.org/licenses/>.
 
 from tensorflow.keras.layers import concatenate
-from tensorflow.keras.layers import (Activation, BatchNormalization as BN,
-                                     Bidirectional, Conv1D, Conv2D,
-                                     Conv2DTranspose as Conv2DT, Dense,
-                                     Flatten, RepeatVector)
+from tensorflow.keras.layers import (
+    Activation,
+    BatchNormalization as BN,
+    Bidirectional,
+    Conv1D,
+    Conv2D,
+    Conv2DTranspose as Conv2DT,
+    Dense,
+    Flatten,
+    RepeatVector,
+)
 from tensorflow.keras.layers import deserialize as deserialize_layer
 from tensorflow.keras.losses import Loss
 from tensorflow.keras.metrics import Metric
 from tensorflow.python.framework.ops import Tensor
 from typing import Dict, List, Optional, Tuple, Union
 
-from . import ingredient, metrics, losses
+from . import metrics, losses
+from .core import ingredient
 from .merge_layer import merge_layer
 
 
 @ingredient.capture
-def outputs(vecs: Union[Tensor, List[Tensor]], layers: Dict,
-            outputs: List[Dict], *args, **kwargs) -> \
-        Tuple[List[Tensor], Dict[str, Loss], Dict[str, List[Metric]]]:
-    output_types = ['class', 'image', 'mask', 'seq', 'vec']
-    assert set([o['t'] for o in outputs]).issubset(output_types)
+def outputs(
+    vecs: Union[Tensor, List[Tensor]],
+    layers: Dict,
+    outputs: List[Dict],
+    *args,
+    **kwargs,
+) -> Tuple[List[Tensor], Dict[str, Loss], Dict[str, List[Metric]]]:
+    output_types = ["class", "image", "mask", "seq", "vec"]
+    assert set([o["t"] for o in outputs]).issubset(output_types)
 
-    if 'batchnorm' in layers:
-        batchnorm = layers['batchnorm']
-        if 'bottleneck2d' in layers:
-            bottleneck_activation = layers['bottleneck2d']['activation']
-            bottleneck2d: Optional[dict] = dict(layers['bottleneck2d'],
-                                                **{'activation': 'linear'})
+    if "batchnorm" in layers:
+        batchnorm = layers["batchnorm"]
+        if "bottleneck2d" in layers:
+            bottleneck_activation = layers["bottleneck2d"]["activation"]
+            bottleneck2d: Optional[dict] = dict(
+                layers["bottleneck2d"], **{"activation": "linear"}
+            )
         else:
             bottleneck2d = None
     else:
         batchnorm = None
-        if 'bottleneck2d' in layers:
-            bottleneck2d = layers['bottleneck2d']
+        if "bottleneck2d" in layers:
+            bottleneck2d = layers["bottleneck2d"]
         else:
             bottleneck2d = None
-    concat_axis = layers['concat_axis'] if 'concat_axis' in layers else -1
-    conv1d = layers['conv1d'] if 'conv1d' in layers else {}
-    conv2d = layers['conv2d'] if 'conv2d' in layers else {}
-    conv2dt = layers['conv2dt'] if 'conv2dt' in layers else {}
-    dense = layers['dense'] if 'dense' in layers else {}
-    rpvec = layers['repeatvector'] if 'repeatvector' in layers else {}
+    concat_axis = layers["concat_axis"] if "concat_axis" in layers else -1
+    conv1d = layers["conv1d"] if "conv1d" in layers else {}
+    conv2d = layers["conv2d"] if "conv2d" in layers else {}
+    conv2dt = layers["conv2dt"] if "conv2dt" in layers else {}
+    dense = layers["dense"] if "dense" in layers else {}
+    rpvec = layers["repeatvector"] if "repeatvector" in layers else {}
 
     if type(vecs) == Tensor:
         vecs = [vecs]
@@ -75,41 +87,71 @@ def outputs(vecs: Union[Tensor, List[Tensor]], layers: Dict,
     loss = {}
     metrics_dict: Dict[str, List[Metric]] = {}
     for v, output in zip(vecs, outputs):
-        activation = output['activation']
+        activation = output["activation"]
         name = f'output_{output["name"]}'
-        nb_classes = output['nb_classes'] if 'nb_classes' in output else 1
+        nb_classes = output["nb_classes"] if "nb_classes" in output else 1
 
-        loss[name] = losses.get(output['loss'])
-        if 'metrics' in output:
-            metrics_dict[name] = metrics.get(output['metrics'])
+        loss[name] = losses.get(output["loss"])
+        if "metrics" in output:
+            metrics_dict[name] = metrics.get(output["metrics"])
 
-        if output['t'] == 'class':
-            if output['layer'] == 'conv1d':
-                outs.append(Conv1D.from_config(dict(conv1d, **{
-                    'filters': nb_classes,
-                    'activation': activation,
-                    'name': name}))(v))
-            elif output['layer'] == 'conv2d':
-                x = Conv2D.from_config(dict(conv2d, **{
-                    'filters': nb_classes,
-                    'kernel_size': v._shape_val[1:3],
-                    'padding': 'valid'}))(v)
+        if output["t"] == "class":
+            if output["layer"] == "conv1d":
+                outs.append(
+                    Conv1D.from_config(
+                        dict(
+                            conv1d,
+                            **{
+                                "filters": nb_classes,
+                                "activation": activation,
+                                "name": name,
+                            },
+                        )
+                    )(v)
+                )
+            elif output["layer"] == "conv2d":
+                x = Conv2D.from_config(
+                    dict(
+                        conv2d,
+                        **{
+                            "filters": nb_classes,
+                            "kernel_size": v._shape_val[1:3],
+                            "padding": "valid",
+                        },
+                    )
+                )(v)
                 x = Flatten()(x)
                 outs.append(Activation(activation, name=name)(x))
-            elif output['layer'] == 'dense':
-                outs.append(Dense.from_config(dict(dense, **{
-                    'units': nb_classes,
-                    'activation': activation,
-                    'name': name}))(v))
-        elif output['t'] == 'image':
-            outs.append(Conv2D.from_config(dict(conv2d, **{
-                'filters': 1 if output['grayscale'] else 3,
-                'kernel_size': (1, 1),
-                'padding': 'same',
-                'activation': activation,
-                'name': name}))(v))
-        elif output['t'] == 'mask':
-            shortcuts = kwargs['shortcuts']
+            elif output["layer"] == "dense":
+                outs.append(
+                    Dense.from_config(
+                        dict(
+                            dense,
+                            **{
+                                "units": nb_classes,
+                                "activation": activation,
+                                "name": name,
+                            },
+                        )
+                    )(v)
+                )
+        elif output["t"] == "image":
+            outs.append(
+                Conv2D.from_config(
+                    dict(
+                        conv2d,
+                        **{
+                            "filters": 1 if output["grayscale"] else 3,
+                            "kernel_size": (1, 1),
+                            "padding": "same",
+                            "activation": activation,
+                            "name": name,
+                        },
+                    )
+                )(v)
+            )
+        elif output["t"] == "mask":
+            shortcuts = kwargs["shortcuts"]
 
             s = v
             for i in reversed(range(len(shortcuts))):
@@ -121,47 +163,62 @@ def outputs(vecs: Union[Tensor, List[Tensor]], layers: Dict,
                     s = shortcut
                 if i > 0:
                     if bottleneck2d is not None:
-                        s = Conv2D.from_config(dict(bottleneck2d, **{
-                            'filters': filters}))(s)
+                        s = Conv2D.from_config(
+                            dict(bottleneck2d, **{"filters": filters})
+                        )(s)
                         if batchnorm is not None:
                             s = BN.from_config(batchnorm)(s)
                             s = Activation(bottleneck_activation)(s)
-                    s = Conv2DT.from_config(dict(conv2dt, **{
-                        'filters': filters}))(s)
+                    s = Conv2DT.from_config(dict(conv2dt, **{"filters": filters}))(s)
 
-            outs.append(Conv2D.from_config(dict(conv2d, **{
-                'filters': nb_classes,
-                'name': name,
-                'activation': activation}))(s))
-        elif output['t'] == 'seq':
-            x = RepeatVector.from_config(dict(rpvec, **{
-                'n': output['length']}))(v)
+            outs.append(
+                Conv2D.from_config(
+                    dict(
+                        conv2d,
+                        **{
+                            "filters": nb_classes,
+                            "name": name,
+                            "activation": activation,
+                        },
+                    )
+                )(s)
+            )
+        elif output["t"] == "seq":
+            x = RepeatVector.from_config(dict(rpvec, **{"n": output["length"]}))(v)
 
-            for j in range(output['N'] if 'N' in output else 1):
-                if 'recurrent' in output:
-                    rnn_layer = dict(**layers[output['recurrent']])
-                elif 'bidirectional' in output:
-                    rnn_layer = dict(**layers[output['bidirectional']])
-                elif 'recurrent_out' in output:
-                    rnn_layer = dict(**layers[output['recurrent_out']])
-                elif 'recurrent_out' in layers:
-                    rnn_layer = dict(**layers['recurrent_out'])
-                elif 'recurrent' in layers:
-                    rnn_layer = dict(**layers['recurrent'])
-                rnn_layer['config'] = dict(rnn_layer['config'], **{
-                        'return_sequences': True})
+            for j in range(output["N"] if "N" in output else 1):
+                if "recurrent" in output:
+                    rnn_layer = dict(**layers[output["recurrent"]])
+                elif "bidirectional" in output:
+                    rnn_layer = dict(**layers[output["bidirectional"]])
+                elif "recurrent_out" in output:
+                    rnn_layer = dict(**layers[output["recurrent_out"]])
+                elif "recurrent_out" in layers:
+                    rnn_layer = dict(**layers["recurrent_out"])
+                elif "recurrent" in layers:
+                    rnn_layer = dict(**layers["recurrent"])
+                rnn_layer["config"] = dict(
+                    rnn_layer["config"], **{"return_sequences": True}
+                )
 
-                if 'bidirectional' in output:
-                    conf = dict(layers['bidirectional'], **{
-                        'layer': rnn_layer})
+                if "bidirectional" in output:
+                    conf = dict(layers["bidirectional"], **{"layer": rnn_layer})
                     x = Bidirectional.from_config(conf)(x)
                 else:
                     x = deserialize_layer(rnn_layer)(x)
-            outs.append(Conv1D.from_config(dict(conv1d, **{
-                    'filters': nb_classes,
-                    'activation': activation,
-                    'name': name}))(x))
-        elif output['t'] == 'vec':
+            outs.append(
+                Conv1D.from_config(
+                    dict(
+                        conv1d,
+                        **{
+                            "filters": nb_classes,
+                            "activation": activation,
+                            "name": name,
+                        },
+                    )
+                )(x)
+            )
+        elif output["t"] == "vec":
             outs.append(v)
 
     return outs, loss, metrics_dict

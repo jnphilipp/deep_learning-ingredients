@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2019 J. Nathanael Philipp (jnphilipp) <nathanael@philipp.land>
+# Copyright (C) 2019-2021 J. Nathanael Philipp (jnphilipp) <nathanael@philipp.land>
 #
 # This file is part of deep_learning-ingredients.
 #
@@ -17,24 +17,26 @@
 # along with deep_learning-ingredients. If not, see
 # <http://www.gnu.org/licenses/>.
 
-from sacred import Ingredient
+from .core import ingredient, get, load, log_param_count, save, summary, plot
 
-from ingredients import optimizers as optimizers_ingredient
-
-from . import losses as losses_ingredient
-from . import metrics as metrics_ingredient
-
-
-ingredient = Ingredient('models',
-                        ingredients=[losses_ingredient.ingredient,
-                                     metrics_ingredient.ingredient,
-                                     optimizers_ingredient.ingredient])
-
-
-from .core import *
 # from . import autoencoder
 from . import cnn
 from . import dense
+
 # from . import gan
 from . import rnn
+
 # from . import siamese
+
+__all__ = (
+    "ingredient",
+    "get",
+    "load",
+    "log_param_count",
+    "save",
+    "summary",
+    "plot",
+    "cnn",
+    "dense",
+    "rnn",
+)
