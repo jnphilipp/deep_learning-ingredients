@@ -1,4 +1,22 @@
 # -*- coding: utf-8 -*-
+# Copyright (C) 2019-2021 J. Nathanael Philipp (jnphilipp) <nathanael@philipp.land>
+#
+# This file is part of deep_learning-ingredients.
+#
+# deep_learning-ingredients is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# deep_learning-ingredients is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with deep_learning-ingredients. If not, see
+# <http://www.gnu.org/licenses/>.
+"""datasets.texts ingredient."""
 
 import math
 import numpy as np
@@ -14,27 +32,30 @@ from . import csv, json
 from .. import paths
 
 
-ingredient = Ingredient('datasets.texts', ingredients=[paths.ingredient])
+ingredient = Ingredient("datasets.texts", ingredients=[paths.ingredient])
 
 
 class TextSequence(Sequence):
+    """Text sequence for tf.keras."""
+
     def __init__(
         self,
-        X: Dict[str, Tuple[int, List[List[int]]]],
-        Y: Dict[str, Tuple[int, List[List[int]]]],
+        x: Dict[str, Tuple[int, List[List[int]]]],
+        y: Dict[str, Tuple[int, List[List[int]]]],
         rnd: np.random.RandomState,
         ids: Optional[List[str]] = None,
         batch_size: int = 10,
         sample_weights: bool = False,
-        mode: str = 'separate',
+        mode: str = "separate",
         dtype: type = np.uint,
     ):
-        assert mode in ['separate', 'concat']
+        """Create a new text sequence."""
+        assert mode in ["separate", "concat"]
 
-        self.X = X
-        self.Y = Y
+        self.x = x
+        self.y = y
         self.ids = ids
-        self.size = len(X[list(X.keys())[0]][1])
+        self.size = len(self.x[list(self.x.keys())[0]][1])
         self.batch_size = batch_size
         self.sample_weights = sample_weights
         self.mode = mode
@@ -43,17 +64,22 @@ class TextSequence(Sequence):
         self.on_epoch_end()
 
     def on_epoch_end(self):
+        """Shuffle data on epoch end."""
         self.index_array = self.rnd.permutation(self.size)
 
     def __len__(self) -> int:
+        """Number of steps per epoch."""
         return math.ceil(self.size / self.batch_size)
 
     def __getitem__(
         self, idx: int
     ) -> Union[
+        Tuple[np.ndarray, np.ndarray],
+        Tuple[np.ndarray, np.ndarray, np.ndarray],
         Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray]],
         Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray], Dict[str, np.ndarray]],
     ]:
+        """Get batch at index."""
         if self.size >= (idx * self.batch_size) + self.batch_size:
             current_batch_size = self.batch_size
         else:
@@ -61,67 +87,67 @@ class TextSequence(Sequence):
         start_idx = idx * self.batch_size
         end_idx = start_idx + current_batch_size
 
-        if self.mode == 'separate':
-            bx = {}
-            for k in self.X.keys():
-                bx[k] = np.zeros((current_batch_size, self.X[k][0]), dtype=self.dtype)
-            by = {}
-            for k in self.Y.keys():
-                by[k] = np.zeros((current_batch_size, self.Y[k][0]), dtype=self.dtype)
+        bx: Dict[str, np.ndarray] = {}
+        by: Dict[str, np.ndarray] = {}
+        bw: Dict[str, np.ndarray] = {}
+        if self.mode == "separate":
+            for k in self.x.keys():
+                bx[k] = np.zeros((current_batch_size, self.x[k][0]), dtype=self.dtype)
+            for k in self.y.keys():
+                by[k] = np.zeros((current_batch_size, self.y[k][0]), dtype=self.dtype)
 
             if self.sample_weights:
-                bw = {}
-                for k in self.X.keys():
-                    bw[k] = np.zeros((current_batch_size, self.X[k][0]), dtype=np.uint)
+                for k in self.x.keys():
+                    bw[k] = np.zeros((current_batch_size, self.x[k][0]), dtype=np.uint)
 
             for i, j in enumerate(range(start_idx, end_idx)):
-                for k in self.X.keys():
-                    bx[k][i, 0: len(self.X[k][1][self.index_array[j]])] = self.X[k][1][
+                for k in self.x.keys():
+                    bx[k][i, 0 : len(self.x[k][1][self.index_array[j]])] = self.x[k][1][
                         self.index_array[j]
                     ]
-                for k in self.Y.keys():
-                    by[k][i, 0: len(self.Y[k][1][self.index_array[j]])] = self.Y[k][1][
+                for k in self.y.keys():
+                    by[k][i, 0 : len(self.y[k][1][self.index_array[j]])] = self.y[k][1][
                         self.index_array[j]
                     ]
                 if self.sample_weights:
-                    for k in self.X.keys():
-                        bw[k][i, 0: len(self.X[k][1][self.index_array[j]])] = 1
+                    for k in self.x.keys():
+                        bw[k][i, 0 : len(self.x[k][1][self.index_array[j]])] = 1
 
             if self.sample_weights:
                 return bx, by, bw
             else:
                 return bx, by
         elif self.mode == "concat":
-            x = np.zeros(
-                (current_batch_size, sum([v[0] for v in self.X.values()])),
+            bx["concat"] = np.zeros(
+                (current_batch_size, sum([v[0] for v in self.x.values()])),
                 dtype=self.dtype,
             )
-            y = np.zeros(
-                (current_batch_size, sum([v[0] for v in self.Y.values()])),
+            by["concat"] = np.zeros(
+                (current_batch_size, sum([v[0] for v in self.y.values()])),
                 dtype=self.dtype,
             )
             if self.sample_weights:
-                w = np.zeros(
-                    (current_batch_size, sum([v[0] for v in self.X.values()])),
+                bw["concat"] = np.zeros(
+                    (current_batch_size, sum([v[0] for v in self.x.values()])),
                     dtype=np.uint,
                 )
             for i, j in enumerate(range(start_idx, end_idx)):
-                length = sum([len(v[1][self.index_array[j]]) for v in self.X.values()])
+                length = sum([len(v[1][self.index_array[j]]) for v in self.x.values()])
                 y_length = sum(
-                    [len(v[1][self.index_array[j]]) for v in self.Y.values()]
+                    [len(v[1][self.index_array[j]]) for v in self.y.values()]
                 )
-                x[i, 0:length] = list(
-                    chain(v[1][self.index_array[j]] for v in self.X.values())
+                bx["concat"][i, 0:length] = list(
+                    chain(v[1][self.index_array[j]] for v in self.x.values())
                 )
-                y[i, 0:y_length] = list(
-                    chain(v[1][self.index_array[j]] for v in self.Y.values())
+                by["concat"][i, 0:y_length] = list(
+                    chain(v[1][self.index_array[j]] for v in self.y.values())
                 )
                 if self.sample_weights:
-                    w[i, 0:length] = 1
+                    bw["concat"][i, 0:length] = 1
             if self.sample_weights:
-                return x, y, w
+                return bx["concat"], by["concat"], bw["concat"]
             else:
-                return x, y
+                return bx["concat"], by["concat"]
         else:
             return {}, {}
 
@@ -137,22 +163,25 @@ def get(
     y_append_one: bool,
     sample_weights: bool,
     dtype: type,
-    paths: Dict,
     _log: Logger,
     _rnd: np.random.RandomState,
     validation_split: Optional[float] = None,
     vocab_path: Optional[str] = None,
 ) -> Union[TextSequence, Tuple[TextSequence, TextSequence]]:
-    assert mode in ['separate', 'concat']
+    """Get text sequenc(s) from csv data."""
+    assert mode in ["separate", "concat"]
     assert validation_split is None or (
         validation_split >= 0.0 and validation_split <= 1.0
     )
 
     vocab = None
     if vocab_path:
-        vocab = json.vocab(os.path.join('{datasets_dir}', dataset, vocab_path))
+        vocab = json.vocab(os.path.join("{datasets_dir}", dataset, vocab_path))
 
-    train_csv = os.path.join('{datasets_dir}', dataset, 'train.csv')
+    if os.path.isfile(paths.join("{datasets_dir}", dataset)):
+        train_csv = paths.join("{datasets_dir}", dataset)
+    else:
+        train_csv = paths.join("{datasets_dir}", dataset, "train.csv")
     tids, tx, ty = csv.load(
         train_csv,
         x_fieldnames,
@@ -166,16 +195,14 @@ def get(
     for k in tx.keys():
         if tx[k]:
             max_len = max([len(i) for i in tx[k]])
-            train_x[k if k.startswith('input_') else f'input_{k}'] = (max_len, tx[k])
+            train_x[k if k.startswith("input_") else f"input_{k}"] = (max_len, tx[k])
     train_y = {}
     for k in ty.keys():
         if ty[k]:
             max_len = max([len(i) for i in ty[k]])
-            train_y[k if k.startswith('output_') else f'output_{k}'] = (max_len, ty[k])
+            train_y[k if k.startswith("output_") else f"output_{k}"] = (max_len, ty[k])
 
-    val_csv = os.path.join('{datasets_dir}', dataset, 'val.csv').format(
-        datasets_dir=paths['datasets_dir']
-    )
+    val_csv = paths.join("{datasets_dir}", dataset, "val.csv")
     if os.path.exists(val_csv):
         vids, vx, vy = csv.load(
             val_csv,
@@ -188,13 +215,13 @@ def get(
         )
         val_x = {}
         for k in tx.keys():
-            xk = k if k.startswith('input_') else f'input_{k}'
+            xk = k if k.startswith("input_") else f"input_{k}"
             max_len = max(train_x[xk][0], max([len(i) for i in vx[k]]))
             train_x[xk] = (max_len, train_x[xk][1])
             val_x[xk] = (max_len, vx[k])
         val_y = {}
         for k in ty.keys():
-            yk = k if k.startswith('output_') else f'output_{k}'
+            yk = k if k.startswith("output_") else f"output_{k}"
             max_len = max(train_y[yk][0], max([len(i) for i in vy[k]]))
             train_y[yk] = (max_len, train_y[yk][1])
             val_y[yk] = (max_len, vy[k])

@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with deep_learning-ingredients. If not, see
 # <http://www.gnu.org/licenses/>.
+"""datasets.csv ingredient."""
 
 import numpy as np
 
@@ -36,7 +37,6 @@ def load(
     path: str,
     x_fieldnames: Union[str, List[str]],
     y_fieldnames: Union[str, List[str]],
-    paths: Dict,
     _log: Logger,
     id_fieldname: Optional[str] = "id",
     vocab: Optional[Vocab] = None,
@@ -44,6 +44,8 @@ def load(
     y_append_one: bool = False,
     dtype: type = np.uint,
 ) -> Tuple[List[str], Dict[str, List[np.ndarray]], Dict[str, List[np.ndarray]]]:
+    """Load data from csv."""
+
     def transform(
         field: str, append_one: bool, vocab: Optional[Vocab] = None
     ) -> np.ndarray:
@@ -70,13 +72,11 @@ def load(
     if isinstance(y_fieldnames, str):
         y_fieldnames = [y_fieldnames]
 
-    _log.info(f"Load {path.format(datasets_dir=paths['datasets_dir'])}.")
+    _log.info(f"Load {paths.join(path)}.")
     ids = []
     x: Dict[str, List[np.ndarray]] = {k: [] for k in x_fieldnames}
     y: Dict[str, List[np.ndarray]] = {k: [] for k in y_fieldnames}
-    with open(
-        path.format(datasets_dir=paths["datasets_dir"]), "r", encoding="utf8"
-    ) as f:
+    with open(paths.join(path), "r", encoding="utf8") as f:
         reader = DictReader(f, dialect="unix")
         for row in reader:
             if id_fieldname and id_fieldname in row:
