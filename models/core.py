@@ -59,12 +59,13 @@ def get(
     ]
     assert net_type in net_types
 
-    kwargs["optimizer"] = (
-        optimizers.get(**kwargs["optimizer"])
-        if "optimizer" in kwargs
-        else optimizers.get()
-    )
     if not path or not os.path.exists(path):
+        kwargs["optimizer"] = (
+            optimizers.get(**kwargs["optimizer"])
+            if "optimizer" in kwargs
+            else optimizers.get()
+        )
+
         if net_type == "autoencoder":
             model = autoencoder.build(*args, **kwargs)
         elif net_type == "cnn":
