@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with deep_learning-ingredients. If not, see
 # <http://www.gnu.org/licenses/>.
+"""Core module of models ingredient."""
 
 import os
 import sys
@@ -34,7 +35,7 @@ from .ingredient import ingredient
 
 
 @ingredient.config
-def config():
+def _config():
     path = None
     inputs = []
     layers = {}
@@ -46,6 +47,7 @@ def config():
 def get(
     path: Optional[str], net_type: str, _log: Logger, *args, **kwargs
 ) -> Union[Model, Sequence[Model]]:
+    """Build or load model(s)."""
     net_types = [
         "autoencoder",
         "rnn-attention",
@@ -89,11 +91,14 @@ def get(
 def load(
     path: Union[str, Sequence[str]], _log: Logger
 ) -> Union[Model, Sequence[Model]]:
+    """Load model(s) from path(s)."""
     if path is None:
         _log.critical("No path given to load model.")
     elif isinstance(path, str):
         _log.info(f"Load model [{path}]")
-        return load_model(path)
+        model = load_model(path)
+        log_param_count(model)
+        return model
     else:
         models = []
         for p in path:
@@ -105,6 +110,7 @@ def load(
 
 @ingredient.capture
 def log_param_count(model: Union[Model, Sequence[Model]], _log: Logger):
+    """Log param count."""
     if isinstance(model, Model):
         model = [model]
     for m in model:
@@ -133,6 +139,7 @@ def save(
     options: SaveOptions = None,
     **kwargs,
 ):
+    """Save model(s)."""
     if "name" in kwargs:
         name = kwargs.pop("name")
     else:
@@ -161,6 +168,7 @@ def save(
 
 @ingredient.command
 def summary(_log: Logger):
+    """Model(s) summary command."""
     _log.info("Print model summary.")
     model = get()
     model.summary()
@@ -168,6 +176,7 @@ def summary(_log: Logger):
 
 @ingredient.command
 def plot(_log: Logger, _run: Run):
+    """Plot model(s) command."""
     model = get()
     model.summary()
     _log.info(f"Plot {model.name}.")
