@@ -167,6 +167,7 @@ def get(
     _rnd: np.random.RandomState,
     validation_split: Optional[float] = None,
     vocab_path: Optional[str] = None,
+    single_sequence: bool = False,
 ) -> Union[TextSequence, Tuple[TextSequence, TextSequence]]:
     """Get text sequenc(s) from csv data."""
     assert mode in ["separate", "concat"]
@@ -231,26 +232,52 @@ def get(
         for k in train_y.keys():
             _log.info(f"Y[{k}] length: {train_y[k][0]}")
 
-        _log.info(
-            f"Train on {len(train_x[list(train_x.keys())[0]][1])} samples and "
-            + f"validating on {len(val_x[list(val_x.keys())[0]][1])} samples."
-        )
+        if single_sequence:
+            tids += vids
+            for k in val_x.keys():
+                train_x[k] = (
+                    max(train_x[k][0], val_x[k][0]),
+                    train_x[k][1] + val_x[k][1],
+                )
+            for k in val_y.keys():
+                train_y[k] = (
+                    max(train_y[k][0], val_y[k][0]),
+                    train_y[k][1] + val_y[k][1],
+                )
 
-        return (
-            TextSequence(
+            _log.info(f"Train on {len(train_x[list(train_x.keys())[0]][1])} samples.")
+
+            return TextSequence(
                 train_x, train_y, _rnd, tids, batch_size, sample_weights, mode, dtype
-            ),
-            TextSequence(
-                val_x, val_y, _rnd, vids, batch_size, sample_weights, mode, dtype
-            ),
-        )
+            )
+        else:
+            _log.info(
+                f"Train on {len(train_x[list(train_x.keys())[0]][1])} samples and "
+                + f"validating on {len(val_x[list(val_x.keys())[0]][1])} samples."
+            )
+
+            return (
+                TextSequence(
+                    train_x,
+                    train_y,
+                    _rnd,
+                    tids,
+                    batch_size,
+                    sample_weights,
+                    mode,
+                    dtype,
+                ),
+                TextSequence(
+                    val_x, val_y, _rnd, vids, batch_size, sample_weights, mode, dtype
+                ),
+            )
     else:
         for k in train_x.keys():
             _log.info(f"X[{k}] length: {train_x[k][0]}")
         for k in train_y.keys():
             _log.info(f"Y[{k}] length: {train_y[k][0]}")
 
-        if validation_split:
+        if validation_split and not single_sequence:
             length = len(train_x[list(train_x.keys())[0]][1])
             per = _rnd.permutation(length)
             idx = int(length * (1.0 - validation_split))
