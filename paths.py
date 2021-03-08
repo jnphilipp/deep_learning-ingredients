@@ -41,5 +41,5 @@ def join(*args) -> str:
 
 
 @ingredient.capture
-def _join(parts: Iterable[str], project_dir, datasets_dir) -> str:
+def _join(parts: Iterable[str], project_dir: str, datasets_dir: str) -> str:
     return os.path.join(*[part.format(datasets_dir=datasets_dir) for part in parts])

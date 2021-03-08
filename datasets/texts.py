@@ -177,7 +177,7 @@ def get(
 
     vocab = None
     if vocab_path:
-        vocab = json.vocab(os.path.join("{datasets_dir}", dataset, vocab_path))
+        vocab = json.vocab(paths.join("{datasets_dir}", dataset, vocab_path))
 
     if os.path.isfile(paths.join("{datasets_dir}", dataset)):
         train_csv = paths.join("{datasets_dir}", dataset)
