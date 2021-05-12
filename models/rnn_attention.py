@@ -26,7 +26,7 @@ from tensorflow.python.framework.ops import Tensor
 from typing import Dict, List, Optional, Union
 
 from .ingredient import ingredient
-from .inputs import inputs
+from .inputs import get as inputs
 from .merge_layer import merge_layer
 
 

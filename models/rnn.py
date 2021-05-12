@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with deep_learning-ingredients. If not, see
 # <http://www.gnu.org/licenses/>.
+"""RNN module of callbacks ingredient."""
 
 from logging import Logger
 from tensorflow.keras.layers import Bidirectional
@@ -26,7 +27,7 @@ from tensorflow.python.framework.ops import Tensor
 from typing import Dict, List, Optional, Union
 
 from .ingredient import ingredient
-from .inputs import inputs
+from .inputs import get as inputs
 from .merge_layer import merge_layer
 from .outputs import outputs
 
@@ -45,6 +46,7 @@ def build(
     *args,
     **kwargs,
 ) -> Model:
+    """Create RNN model from config."""
     if "name" in kwargs:
         name = kwargs.pop("name")
     else:

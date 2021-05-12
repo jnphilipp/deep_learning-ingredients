@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with deep_learning-ingredients. If not, see
 # <http://www.gnu.org/licenses/>.
+"""Inputs module of callbacks ingredient."""
 
 from tensorflow.keras.layers import Embedding, Input
 from tensorflow.keras.layers import deserialize as deserialize_layer
@@ -23,15 +24,17 @@ from tensorflow.python.framework.ops import Tensor
 from typing import Dict, List, Tuple
 
 from .ingredient import ingredient
+from .merge_layer import merge_layer
 
 
 @ingredient.capture
-def inputs(
+def get(
     inputs: List[Dict], layers: Dict, *args, **kwargs
 ) -> Tuple[List[Tensor], List[Tensor]]:
+    """Transform config to model inputs."""
     model_inputs = []
     xs = []
-    tensors: dict = {}
+    tensors: dict = kwargs["tensors"] if "tensors" in kwargs else {}
     for _input in inputs:
         if _input["t"] == "embedding" or _input["t"] == "embedding-attention":
             x = Input(shape=_input["shape"], name=f'input_{_input["name"]}')
@@ -75,4 +78,18 @@ def inputs(
                 x = Input(shape=_input["shape"], name=f'input_output_{_input["name"]}')
                 model_inputs.append(x)
                 xs.append(x)
+        elif _input["t"] == "merge":
+            _ins, _xs = get(_input["inputs"], tensors=tensors, *args, **kwargs)
+            model_inputs += _ins
+
+            xs += [
+                merge_layer(
+                    _xs,
+                    t=_input["merge"]["t"],
+                    config=_input["merge"]["config"]
+                    if "config" in _input["merge"]
+                    else {},
+                )
+            ]
+
     return model_inputs, xs

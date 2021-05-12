@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with deep_learning-ingredients. If not, see
 # <http://www.gnu.org/licenses/>.
-"""Core modul of callbacks ingredient."""
+"""Core module of callbacks ingredient."""
 
 import os
 
@@ -71,7 +71,7 @@ def get(
 
     if weightslogging is not None:
         _log.info("Add WeightsLogging callback.")
-        if type(_run.observers[0] == FileStorageObserver):
+        if len(_run.observers) >= 1 and type(_run.observers[0]) == FileStorageObserver:
             path = os.path.join(_run.observers[0].dir, "weights_history.csv")
             callbacks.append(
                 WeightsLogging(
@@ -85,9 +85,10 @@ def get(
     if modelcheckpoint is not None:
         _log.info("Add ModelCheckpoint callback.")
 
-        if type(_run.observers[0] == FileStorageObserver):
-            filepath = os.path.join(_run.observers[0].dir, "modelcheckpoint")
-            os.makedirs(filepath, exist_ok=True)
+        if len(_run.observers) >= 1 and type(_run.observers[0]) == FileStorageObserver:
+            base_dir = os.path.join(_run.observers[0].dir, "modelcheckpoint")
+            os.makedirs(base_dir, exist_ok=True)
+            filepath = os.path.join(base_dir, modelcheckpoint["filepath"])
 
             callbacks.append(
                 ModelCheckpoint(
@@ -117,7 +118,7 @@ def get(
     if tensorboard is not None:
         _log.info("Add TensorBoard callback.")
 
-        if type(_run.observers[0] == FileStorageObserver):
+        if len(_run.observers) >= 1 and type(_run.observers[0]) == FileStorageObserver:
             log_dir = os.path.join(_run.observers[0].dir, "logs")
             os.makedirs(log_dir, exist_ok=True)
 
