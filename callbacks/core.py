@@ -23,14 +23,17 @@ import os
 from logging import Logger
 from sacred import Ingredient
 from sacred.run import Run
+from sacred.observers import FileStorageObserver
 from tensorflow.keras.callbacks import (
     Callback,
     EarlyStopping,
     ModelCheckpoint,
+    LearningRateScheduler,
     ReduceLROnPlateau,
+    TensorBoard,
     TerminateOnNaN,
 )
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from .print_sample_prediction import PrintSamplePrediction
 from .sacred_metrics_logging import SacredMetricsLogging
@@ -49,12 +52,14 @@ def _config():
 def get(
     _log: Logger,
     _run: Run,
-    earlystopping: Dict[str, Any] = None,
-    modelcheckpoint: Dict[str, Any] = None,
+    earlystopping: Optional[Dict[str, Any]] = None,
+    modelcheckpoint: Optional[Dict[str, Any]] = None,
+    learningratescheduler: Optional[Dict[str, Any]] = None,
+    reducelronplateau: Optional[Dict[str, Any]] = None,
+    tensorboard: Optional[Dict[str, Any]] = None,
     terminateonnan: bool = True,
-    reducelronplateau: Dict[str, Any] = None,
-    printsampleprediction: Dict[str, Any] = None,
-    weightslogging: Dict[str, str] = None,
+    printsampleprediction: Optional[Dict[str, Any]] = None,
+    weightslogging: Optional[Dict[str, str]] = None,
 ) -> List[Callback]:
     """Get callback list based on config."""
     _log.info("Add SacredMetricsLogging callback.")
@@ -66,18 +71,36 @@ def get(
 
     if weightslogging is not None:
         _log.info("Add WeightsLogging callback.")
-        path = os.path.join(_run.observers[0].run_dir, "weights_history.csv")
-        callbacks.append(WeightsLogging(path=path, **weightslogging))
+        if type(_run.observers[0] == FileStorageObserver):
+            path = os.path.join(_run.observers[0].dir, "weights_history.csv")
+            callbacks.append(
+                WeightsLogging(
+                    path=path,
+                    **{k: v for k, v in weightslogging.items() if k != "path"}
+                )
+            )
+        else:
+            callbacks.append(WeightsLogging(**weightslogging))
 
     if modelcheckpoint is not None:
         _log.info("Add ModelCheckpoint callback.")
 
-        base_dir = os.path.join(_run.observers[0].run_dir, "modelcheckpoint")
-        os.makedirs(base_dir, exist_ok=True)
+        if type(_run.observers[0] == FileStorageObserver):
+            filepath = os.path.join(_run.observers[0].dir, "modelcheckpoint")
+            os.makedirs(filepath, exist_ok=True)
 
-        filepath = os.path.join(base_dir, modelcheckpoint["filepath"])
-        kwargs = {k: v for k, v in modelcheckpoint.items() if k != "filepath"}
-        callbacks.append(ModelCheckpoint(filepath, **kwargs))
+            callbacks.append(
+                ModelCheckpoint(
+                    filepath,
+                    **{k: v for k, v in modelcheckpoint.items() if k != "filepath"}
+                )
+            )
+        else:
+            callbacks.append(ModelCheckpoint(**modelcheckpoint))
+
+    if learningratescheduler is not None:
+        _log.info("Add LearningRateScheduler callback.")
+        callbacks.append(LearningRateScheduler(**learningratescheduler))
 
     if earlystopping is not None:
         _log.info("Add EarlyStopping callback.")
@@ -90,5 +113,20 @@ def get(
     if printsampleprediction is not None:
         _log.info("Add PrintSamplePrediction callback.")
         callbacks.append(PrintSamplePrediction(**printsampleprediction))
+
+    if tensorboard is not None:
+        _log.info("Add TensorBoard callback.")
+
+        if type(_run.observers[0] == FileStorageObserver):
+            log_dir = os.path.join(_run.observers[0].dir, "logs")
+            os.makedirs(log_dir, exist_ok=True)
+
+            callbacks.append(
+                TensorBoard(
+                    log_dir, **{k: v for k, v in tensorboard.items() if k != "log_dir"}
+                )
+            )
+        else:
+            callbacks.append(TensorBoard(**tensorboard))
 
     return callbacks
