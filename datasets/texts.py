@@ -95,11 +95,11 @@ class TextSequence(Sequence):
         if self.mode == "separate":
             for k in self.x.keys():
                 bx[k] = np.zeros(
-                    (current_batch_size, self.x[k][0]), dtype=self.self.x[k][1][0].dtype
+                    (current_batch_size, self.x[k][0]), dtype=self.x[k][1][0].dtype
                 )
             for k in self.y.keys():
                 by[k] = np.zeros(
-                    (current_batch_size, self.y[k][0]), dtype=self.self.x[k][1][0].dtype
+                    (current_batch_size, self.y[k][0]), dtype=self.x[k][1][0].dtype
                 )
 
             if self.sample_weights:
