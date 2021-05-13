@@ -40,14 +40,18 @@ def load(
     _log: Logger,
     id_fieldname: Optional[str] = "id",
     vocab: Optional[Vocab] = None,
+    vocab_fieldnames: List[str] = [],
     x_append_one: bool = True,
     y_append_one: bool = False,
-    dtype: type = np.uint,
+    dtype: Union[type, Dict[str, type]] = np.uint,
 ) -> Tuple[List[str], Dict[str, List[np.ndarray]], Dict[str, List[np.ndarray]]]:
     """Load data from csv."""
 
     def transform(
-        field: str, append_one: bool, vocab: Optional[Vocab] = None
+        field: str,
+        append_one: bool,
+        vocab: Optional[Vocab] = None,
+        dtype: type = np.uint,
     ) -> np.ndarray:
         if ";" in field and "," in field:
             return np.array(
@@ -83,9 +87,23 @@ def load(
                 ids.append(row[id_fieldname])
             for field in x_fieldnames:
                 if field in row:
-                    x[field].append(transform(row[field], x_append_one, vocab))
+                    x[field].append(
+                        transform(
+                            row[field],
+                            x_append_one,
+                            vocab if field in vocab_fieldnames else None,
+                            dtype[field] if isinstance(dtype, dict) else dtype,
+                        )
+                    )
             for field in y_fieldnames:
                 if field in row:
-                    y[field].append(transform(row[field], y_append_one, vocab))
+                    y[field].append(
+                        transform(
+                            row[field],
+                            y_append_one,
+                            vocab if field in vocab_fieldnames else None,
+                            dtype[field] if isinstance(dtype, dict) else dtype,
+                        )
+                    )
 
     return ids, x, y

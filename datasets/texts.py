@@ -40,14 +40,13 @@ class TextSequence(Sequence):
 
     def __init__(
         self,
-        x: Dict[str, Tuple[int, List[List[int]]]],
-        y: Dict[str, Tuple[int, List[List[int]]]],
+        x: Dict[str, Tuple[int, np.ndarray]],
+        y: Dict[str, Tuple[int, np.ndarray]],
         rnd: np.random.RandomState,
         ids: Optional[List[str]] = None,
         batch_size: int = 10,
         sample_weights: bool = False,
         mode: str = "separate",
-        dtype: type = np.uint,
     ):
         """Create a new text sequence."""
         assert mode in ["separate", "concat"]
@@ -60,7 +59,10 @@ class TextSequence(Sequence):
         self.sample_weights = sample_weights
         self.mode = mode
         self.rnd = rnd
-        self.dtype = dtype
+
+        if self.mode == "separate":
+            self.dtype = self.x[list(self.x.keys())[0]][1].dtype
+
         self.on_epoch_end()
 
     def on_epoch_end(self):
@@ -68,7 +70,7 @@ class TextSequence(Sequence):
         self.index_array = self.rnd.permutation(self.size)
 
     def __len__(self) -> int:
-        """Number of steps per epoch."""
+        """Steps per epoch."""
         return math.ceil(self.size / self.batch_size)
 
     def __getitem__(
@@ -92,9 +94,13 @@ class TextSequence(Sequence):
         bw: Dict[str, np.ndarray] = {}
         if self.mode == "separate":
             for k in self.x.keys():
-                bx[k] = np.zeros((current_batch_size, self.x[k][0]), dtype=self.dtype)
+                bx[k] = np.zeros(
+                    (current_batch_size, self.x[k][0]), dtype=self.self.x[k][1].dtype
+                )
             for k in self.y.keys():
-                by[k] = np.zeros((current_batch_size, self.y[k][0]), dtype=self.dtype)
+                by[k] = np.zeros(
+                    (current_batch_size, self.y[k][0]), dtype=self.self.x[k][1].dtype
+                )
 
             if self.sample_weights:
                 for k in self.x.keys():
@@ -162,11 +168,12 @@ def get(
     x_append_one: bool,
     y_append_one: bool,
     sample_weights: bool,
-    dtype: type,
+    dtype: Union[type, Dict[str, type]],
     _log: Logger,
     _rnd: np.random.RandomState,
     validation_split: Optional[float] = None,
     vocab_path: Optional[str] = None,
+    vocab_fieldnames: List[str] = [],
     single_sequence: bool = False,
 ) -> Union[TextSequence, Tuple[TextSequence, TextSequence]]:
     """Get text sequenc(s) from csv data."""
@@ -188,6 +195,7 @@ def get(
         x_fieldnames,
         y_fieldnames,
         vocab=vocab,
+        vocab_fieldnames=vocab_fieldnames,
         x_append_one=x_append_one,
         y_append_one=y_append_one,
         dtype=dtype,
@@ -210,6 +218,7 @@ def get(
             x_fieldnames,
             y_fieldnames,
             vocab=vocab,
+            vocab_fieldnames=vocab_fieldnames,
             x_append_one=x_append_one,
             y_append_one=y_append_one,
             dtype=dtype,
@@ -248,7 +257,13 @@ def get(
             _log.info(f"Train on {len(train_x[list(train_x.keys())[0]][1])} samples.")
 
             return TextSequence(
-                train_x, train_y, _rnd, tids, batch_size, sample_weights, mode, dtype
+                train_x,
+                train_y,
+                _rnd,
+                tids,
+                batch_size,
+                sample_weights,
+                mode,
             )
         else:
             _log.info(
@@ -265,10 +280,15 @@ def get(
                     batch_size,
                     sample_weights,
                     mode,
-                    dtype,
                 ),
                 TextSequence(
-                    val_x, val_y, _rnd, vids, batch_size, sample_weights, mode, dtype
+                    val_x,
+                    val_y,
+                    _rnd,
+                    vids,
+                    batch_size,
+                    sample_weights,
+                    mode,
                 ),
             )
     else:
@@ -302,12 +322,10 @@ def get(
                 train_y[k] = (train_y[k][0], [train_y[k][1][i] for i in per[0:idx]])
 
             return TextSequence(
-                train_x, train_y, _rnd, tids, batch_size, sample_weights, mode, dtype
-            ), TextSequence(
-                val_x, val_y, _rnd, vids, batch_size, sample_weights, mode, dtype
-            )
+                train_x, train_y, _rnd, tids, batch_size, sample_weights, mode
+            ), TextSequence(val_x, val_y, _rnd, vids, batch_size, sample_weights, mode)
         else:
             _log.info(f"Run on {len(train_x[list(train_x.keys())[0]][1])} samples.")
             return TextSequence(
-                train_x, train_y, _rnd, tids, batch_size, sample_weights, mode, dtype
+                train_x, train_y, _rnd, tids, batch_size, sample_weights, mode
             )
