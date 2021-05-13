@@ -40,8 +40,8 @@ class TextSequence(Sequence):
 
     def __init__(
         self,
-        x: Dict[str, Tuple[int, np.ndarray]],
-        y: Dict[str, Tuple[int, np.ndarray]],
+        x: Dict[str, Tuple[int, List[np.ndarray]]],
+        y: Dict[str, Tuple[int, List[np.ndarray]]],
         rnd: np.random.RandomState,
         ids: Optional[List[str]] = None,
         batch_size: int = 10,
@@ -61,7 +61,7 @@ class TextSequence(Sequence):
         self.rnd = rnd
 
         if self.mode == "separate":
-            self.dtype = self.x[list(self.x.keys())[0]][1].dtype
+            self.dtype = self.x[list(self.x.keys())[0]][1][0].dtype
 
         self.on_epoch_end()
 
@@ -95,11 +95,11 @@ class TextSequence(Sequence):
         if self.mode == "separate":
             for k in self.x.keys():
                 bx[k] = np.zeros(
-                    (current_batch_size, self.x[k][0]), dtype=self.self.x[k][1].dtype
+                    (current_batch_size, self.x[k][0]), dtype=self.self.x[k][1][0].dtype
                 )
             for k in self.y.keys():
                 by[k] = np.zeros(
-                    (current_batch_size, self.y[k][0]), dtype=self.self.x[k][1].dtype
+                    (current_batch_size, self.y[k][0]), dtype=self.self.x[k][1][0].dtype
                 )
 
             if self.sample_weights:
