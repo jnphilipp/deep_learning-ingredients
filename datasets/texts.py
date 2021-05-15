@@ -30,6 +30,7 @@ from typing import Dict, List, Optional, Tuple, Union
 
 from . import csv, json
 from .. import paths
+from ..vocab import Vocab
 
 
 ingredient = Ingredient("datasets.texts", ingredients=[paths.ingredient])
@@ -47,18 +48,23 @@ class TextSequence(Sequence):
         batch_size: int = 10,
         sample_weights: bool = False,
         mode: str = "separate",
+        shuffle: bool = True,
+        vocab: Optional[Vocab] = None,
     ):
         """Create a new text sequence."""
         assert mode in ["separate", "concat"]
 
         self.x = x
         self.y = y
+        self.rnd = rnd
         self.ids = ids
-        self.size = len(self.x[list(self.x.keys())[0]][1])
         self.batch_size = batch_size
         self.sample_weights = sample_weights
         self.mode = mode
-        self.rnd = rnd
+        self.shuffle = shuffle
+        self.vocab = vocab
+
+        self.size = len(self.x[list(self.x.keys())[0]][1])
 
         if self.mode == "separate":
             self.dtype = self.x[list(self.x.keys())[0]][1][0].dtype
@@ -67,7 +73,10 @@ class TextSequence(Sequence):
 
     def on_epoch_end(self):
         """Shuffle data on epoch end."""
-        self.index_array = self.rnd.permutation(self.size)
+        if self.shuffle:
+            self.index_array = self.rnd.permutation(self.size)
+        else:
+            self.index_array = np.array(range(self.size))
 
     def __len__(self) -> int:
         """Steps per epoch."""
@@ -124,16 +133,16 @@ class TextSequence(Sequence):
             else:
                 return bx, by
         elif self.mode == "concat":
-            bx["concat"] = np.zeros(
+            bx["input_concat"] = np.zeros(
                 (current_batch_size, sum([v[0] for v in self.x.values()])),
                 dtype=self.dtype,
             )
-            by["concat"] = np.zeros(
+            by["output_concat"] = np.zeros(
                 (current_batch_size, sum([v[0] for v in self.y.values()])),
                 dtype=self.dtype,
             )
             if self.sample_weights:
-                bw["concat"] = np.zeros(
+                bw["input_concat"] = np.zeros(
                     (current_batch_size, sum([v[0] for v in self.x.values()])),
                     dtype=np.uint,
                 )
@@ -142,18 +151,18 @@ class TextSequence(Sequence):
                 y_length = sum(
                     [len(v[1][self.index_array[j]]) for v in self.y.values()]
                 )
-                bx["concat"][i, 0:length] = list(
+                bx["input_concat"][i, 0:length] = list(
                     chain(v[1][self.index_array[j]] for v in self.x.values())
                 )
-                by["concat"][i, 0:y_length] = list(
+                by["output_concat"][i, 0:y_length] = list(
                     chain(v[1][self.index_array[j]] for v in self.y.values())
                 )
                 if self.sample_weights:
-                    bw["concat"][i, 0:length] = 1
+                    bw["input_concat"][i, 0:length] = 1
             if self.sample_weights:
-                return bx["concat"], by["concat"], bw["concat"]
+                return bx["input_concat"], by["output_concat"], bw["input_concat"]
             else:
-                return bx["concat"], by["concat"]
+                return bx["input_concat"], by["output_concat"]
         else:
             return {}, {}
 
@@ -175,6 +184,7 @@ def get(
     vocab_path: Optional[str] = None,
     vocab_fieldnames: List[str] = [],
     single_sequence: bool = False,
+    shuffle: bool = True,
 ) -> Union[TextSequence, Tuple[TextSequence, TextSequence]]:
     """Get text sequenc(s) from csv data."""
     assert mode in ["separate", "concat"]
@@ -184,7 +194,10 @@ def get(
 
     vocab = None
     if vocab_path:
-        vocab = json.vocab(paths.join("{datasets_dir}", dataset, vocab_path))
+        if os.path.isfile(paths.join("{datasets_dir}", dataset)):
+            vocab = json.vocab(paths.join("{datasets_dir}", vocab_path))
+        else:
+            vocab = json.vocab(paths.join("{datasets_dir}", dataset, vocab_path))
 
     if os.path.isfile(paths.join("{datasets_dir}", dataset)):
         train_csv = paths.join("{datasets_dir}", dataset)
@@ -264,6 +277,8 @@ def get(
                 batch_size,
                 sample_weights,
                 mode,
+                shuffle,
+                vocab,
             )
         else:
             _log.info(
@@ -280,6 +295,8 @@ def get(
                     batch_size,
                     sample_weights,
                     mode,
+                    shuffle,
+                    vocab,
                 ),
                 TextSequence(
                     val_x,
@@ -289,6 +306,8 @@ def get(
                     batch_size,
                     sample_weights,
                     mode,
+                    shuffle,
+                    vocab,
                 ),
             )
     else:
@@ -323,9 +342,27 @@ def get(
 
             return TextSequence(
                 train_x, train_y, _rnd, tids, batch_size, sample_weights, mode
-            ), TextSequence(val_x, val_y, _rnd, vids, batch_size, sample_weights, mode)
+            ), TextSequence(
+                val_x,
+                val_y,
+                _rnd,
+                vids,
+                batch_size,
+                sample_weights,
+                mode,
+                shuffle,
+                vocab,
+            )
         else:
             _log.info(f"Run on {len(train_x[list(train_x.keys())[0]][1])} samples.")
             return TextSequence(
-                train_x, train_y, _rnd, tids, batch_size, sample_weights, mode
+                train_x,
+                train_y,
+                _rnd,
+                tids,
+                batch_size,
+                sample_weights,
+                mode,
+                shuffle,
+                vocab,
             )
