@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# vim: ft=python fileencoding=utf-8 sts=4 sw=4 et:
 # Copyright (C) 2019-2021 J. Nathanael Philipp (jnphilipp) <nathanael@philipp.land>
 #
 # This file is part of deep_learning-ingredients.
@@ -16,100 +17,44 @@
 # You should have received a copy of the GNU General Public License
 # along with deep_learning-ingredients. If not, see
 # <http://www.gnu.org/licenses/>.
-"""RNN module of callbacks ingredient."""
+"""RNN module for models ingredient."""
 
-from logging import Logger
-from tensorflow.keras.layers import Bidirectional
+from tensorflow.keras.layers import Bidirectional, Layer
 from tensorflow.keras.layers import deserialize as deserialize_layer
-from tensorflow.keras.models import Model
-from tensorflow.keras.optimizers import Optimizer
-from tensorflow.python.framework.ops import Tensor
-from typing import Dict, List, Optional, Union
+from tensorflow.python.keras.engine.keras_tensor import KerasTensor
+from typing import Callable, Dict, List, Optional
 
 from .ingredient import ingredient
-from .inputs import get as inputs
-from .merge_layer import merge_layer
-from .outputs import outputs
 
 
-@ingredient.capture
-def build(
-    N: int,
-    merge: Optional[Dict],
-    layers: Dict,
-    optimizer: Optimizer,
-    _log: Logger,
-    loss_weights: Optional[Union[List, Dict]] = None,
-    sample_weight_mode: Optional[Union[str, Dict[str, str], List[str]]] = None,
-    weighted_metrics: Optional[List] = None,
-    target_tensors: Optional[Union[Tensor, List[Tensor]]] = None,
-    *args,
+@ingredient.capture(prefix="layers")
+def block(
+    nb_layers: int,
+    recurrent: Dict,
+    bidirectional: Optional[Dict] = None,
     **kwargs,
-) -> Model:
-    """Create RNN model from config."""
-    if "name" in kwargs:
-        name = kwargs.pop("name")
-    else:
-        name = "rnn"
-    _log.info(f"Build RNN model [{name}]")
-
-    ins, xs = (
-        inputs(inputs=kwargs["inputs"], layers=layers)
-        if "inputs" in kwargs
-        else inputs()
-    )
-    if merge is not None and "depth" in merge and merge["depth"] == 0:
-        xs = [
-            merge_layer(
-                xs, t=merge["t"], config=merge["config"] if "config" in merge else {}
+) -> Callable:
+    """Create RNN block from config."""
+    _layers: Dict[int, Layer] = {}
+    for i in range(nb_layers):
+        rnn_layer = dict(**recurrent)
+        if i != nb_layers - 1:
+            rnn_layer["config"] = dict(
+                rnn_layer["config"], **{"return_sequences": True}
             )
-        ]
 
-    tensors: dict = {}
-    for i in range(N):
-        for j, x in enumerate(xs):
-            rnn_layer = dict(**layers["recurrent"])
-            if i != N - 1:
-                rnn_layer["config"] = dict(
-                    rnn_layer["config"], **{"return_sequences": True}
-                )
+        if bidirectional:
+            _layers[i] = Bidirectional.from_config(
+                dict(bidirectional, **{"layer": rnn_layer})
+            )
+        else:
+            _layers[i] = deserialize_layer(rnn_layer)
 
-            if (
-                "bidirectional" in layers
-                and layers["bidirectional"]
-                and i not in tensors
-            ):
-                conf = dict(layers["bidirectional"], **{"layer": rnn_layer})
-                tensors[i] = Bidirectional.from_config(conf)
-            elif i not in tensors:
-                tensors[i] = deserialize_layer(rnn_layer)
-            xs[j] = tensors[i](x)
+    def _block(tensors: List[KerasTensor]) -> List[KerasTensor]:
+        xs = [None for i in tensors]
+        for i in range(nb_layers):
+            for j, x in enumerate(xs):
+                xs[j] = _layers[i](tensors[j] if x is None else x)
+        return xs
 
-        if merge is not None and "depth" in merge and merge["depth"] == i + 1:
-            xs = [
-                merge_layer(
-                    xs,
-                    t=merge["t"],
-                    config=merge["config"] if "config" in merge else {},
-                )
-            ]
-
-    # outputs
-    outs, loss, metrics = (
-        outputs(xs, outputs=kwargs["outputs"], layers=layers)
-        if "outputs" in kwargs
-        else outputs(xs)
-    )
-
-    # Model
-    model = Model(inputs=ins, outputs=outs, name=name)
-    model.compile(
-        loss=loss,
-        metrics=metrics,
-        loss_weights=loss_weights,
-        optimizer=optimizer,
-        sample_weight_mode=sample_weight_mode,
-        weighted_metrics=weighted_metrics,
-        target_tensors=target_tensors,
-    )
-    return model
+    return _block

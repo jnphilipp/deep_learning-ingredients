@@ -16,15 +16,16 @@
 # You should have received a copy of the GNU General Public License
 # along with deep_learning-ingredients. If not, see
 # <http://www.gnu.org/licenses/>.
+"""Outputs module for models ingredient."""
 
 from tensorflow.keras.layers import concatenate
 from tensorflow.keras.layers import (
     Activation,
-    BatchNormalization as BN,
+    BatchNormalization,
     Bidirectional,
     Conv1D,
     Conv2D,
-    Conv2DTranspose as Conv2DT,
+    Conv2DTranspose,
     Dense,
     Flatten,
     RepeatVector,
@@ -32,22 +33,23 @@ from tensorflow.keras.layers import (
 from tensorflow.keras.layers import deserialize as deserialize_layer
 from tensorflow.keras.losses import Loss
 from tensorflow.keras.metrics import Metric
-from tensorflow.python.framework.ops import Tensor
+from tensorflow.python.keras.engine.keras_tensor import KerasTensor
 from typing import Dict, List, Optional, Tuple, Union
 
 from . import metrics, losses
+from .base import merge
 from .ingredient import ingredient
-from .merge_layer import merge_layer
 
 
 @ingredient.capture
-def outputs(
-    vecs: Union[Tensor, List[Tensor]],
+def build(
+    vecs: Union[KerasTensor, List[KerasTensor]],
     layers: Dict,
     outputs: List[Dict],
     *args,
     **kwargs,
-) -> Tuple[List[Tensor], Dict[str, Loss], Dict[str, List[Metric]]]:
+) -> Tuple[List[KerasTensor], Dict[str, Loss], Dict[str, List[Metric]]]:
+    """Build model output(s) from config."""
     output_types = ["class", "image", "mask", "seq", "vec"]
     assert set([o["t"] for o in outputs]).issubset(output_types)
 
@@ -73,13 +75,13 @@ def outputs(
     dense = layers["dense"] if "dense" in layers else {}
     rpvec = layers["repeatvector"] if "repeatvector" in layers else {}
 
-    if type(vecs) == Tensor:
+    if not isinstance(vecs, list):
         vecs = [vecs]
 
     if len(outputs) > 1 and len(vecs) == 1:
         vecs = vecs * len(outputs)
     elif len(outputs) == 1 and len(vecs) > 1:
-        vecs = [merge_layer(vecs)]
+        vecs = [merge()(vecs)]
     else:
         assert len(outputs) == len(vecs)
 
@@ -167,9 +169,11 @@ def outputs(
                             dict(bottleneck2d, **{"filters": filters})
                         )(s)
                         if batchnorm is not None:
-                            s = BN.from_config(batchnorm)(s)
+                            s = BatchNormalization.from_config(batchnorm)(s)
                             s = Activation(bottleneck_activation)(s)
-                    s = Conv2DT.from_config(dict(conv2dt, **{"filters": filters}))(s)
+                    s = Conv2DTranspose.from_config(
+                        dict(conv2dt, **{"filters": filters})
+                    )(s)
 
             outs.append(
                 Conv2D.from_config(

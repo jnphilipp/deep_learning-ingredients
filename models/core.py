@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# vim: ft=python fileencoding=utf-8 sts=4 sw=4 et:
 # Copyright (C) 2019-2021 J. Nathanael Philipp (jnphilipp) <nathanael@philipp.land>
 #
 # This file is part of deep_learning-ingredients.
@@ -25,12 +26,15 @@ from ingredients import optimizers
 from logging import Logger
 from sacred.run import Run
 from tensorflow.keras.models import load_model, Model
+from tensorflow.keras.optimizers import Optimizer
 from tensorflow.keras.utils import plot_model
+from tensorflow.python.framework.ops import Tensor
+from tensorflow.python.keras.engine.keras_tensor import KerasTensor
 from tensorflow.python.keras.utils.layer_utils import count_params
 from tensorflow.saved_model import SaveOptions
-from typing import Callable, Dict, Optional, Sequence, Union
+from typing import Callable, Dict, Iterable, List, Optional, Sequence, Union
 
-from . import autoencoder, cnn, dense, gan, rnn, rnn_attention, siamese
+from . import base, conv1d, conv2d, dense, inputs, outputs, rnn
 from .ingredient import ingredient
 
 
@@ -45,20 +49,9 @@ def _config():
 
 @ingredient.capture
 def get(
-    path: Optional[str], net_type: str, _log: Logger, *args, **kwargs
+    path: Optional[str], _log: Logger, *args, **kwargs
 ) -> Union[Model, Sequence[Model]]:
     """Build or load model(s)."""
-    net_types = [
-        "autoencoder",
-        "rnn-attention",
-        "cnn",
-        "dense",
-        "gan",
-        "rnn",
-        "siamese",
-    ]
-    assert net_type in net_types
-
     if not path or not os.path.exists(path):
         kwargs["optimizer"] = (
             optimizers.get(**kwargs["optimizer"])
@@ -66,26 +59,119 @@ def get(
             else optimizers.get()
         )
 
-        if net_type == "autoencoder":
-            model = autoencoder.build(*args, **kwargs)
-        elif net_type == "cnn":
-            model = cnn.build(*args, **kwargs)
-        elif net_type == "dense":
-            model = dense.build(*args, **kwargs)
-        elif net_type == "gan":
-            model = gan.build(*args, **kwargs)
-        elif net_type == "rnn":
-            model = rnn.build(*args, **kwargs)
-        elif net_type == "rnn-attention":
-            model = rnn_attention.build(*args, **kwargs)
-        elif net_type == "siamese":
-            model = siamese.build(*args, **kwargs)
+        model = build(*args, **kwargs)
 
         if "log_params" not in kwargs or kwargs["log_params"]:
             log_param_count(model)
         return model
     else:
         return load(path)
+
+
+@ingredient.capture
+def build(
+    blocks: List[Dict],
+    optimizer: Optimizer,
+    _log: Logger,
+    loss_weights: Optional[Union[List, Dict]] = None,
+    sample_weight_mode: Optional[Union[str, Dict[str, str], List[str]]] = None,
+    weighted_metrics: Optional[List] = None,
+    target_tensors: Optional[
+        Union[Tensor, KerasTensor, List[Tensor], List[KerasTensor]]
+    ] = None,
+    *args,
+    **kwargs,
+) -> Model:
+    """Build model from config."""
+    if "name" in kwargs:
+        name = kwargs.pop("name")
+        _log.info(f"Build model [{name}].")
+    else:
+        name = None
+        _log.info("Build model.")
+
+    # inputs
+    model_inputs, input_tensors = inputs.build()
+
+    tensors: List[KerasTensor] = []
+    shortcuts = []
+    output_tensors = []
+    for i, block in enumerate(blocks):
+        if "inputs" in block:
+            if isinstance(block["inputs"], int) and block["inputs"] >= 0:
+                x = tensors[block["inputs"]]
+            elif isinstance(block["inputs"], str) and block["inputs"] == "inputs":
+                x = input_tensors
+            elif isinstance(block["inputs"], Iterable):
+                x = []
+                for j in block["inputs"]:
+                    if isinstance(j, int):
+                        x.append(tensors[j])
+                    elif isinstance(j, str):
+                        if j == "inputs":
+                            x.append(input_tensors)
+        elif len(tensors) == 0:
+            x = input_tensors
+        else:
+            x = tensors[-1]
+
+        if block["t"] == "conv1d":
+            tensors.append(
+                conv1d.block(**block["config"] if "config" in block else {})(x)
+            )
+        elif block["t"] == "conv2d":
+            t = conv2d.block(**block["config"] if "config" in block else {})(x)
+            if isinstance(t, tuple):
+                tensors.append(t[0])
+                shortcuts.append(t[1])
+            else:
+                tensors.append(t)
+        elif block["t"] == "dense":
+            tensors.append(
+                dense.block(**block["config"] if "config" in block else {})(x)
+            )
+        elif block["t"] == "merge":
+            tensors.append(
+                base.merge(**block["config"] if "config" in block else {})(x)
+            )
+        elif block["t"] == "reshape":
+            tensors.append(
+                base.reshape(**block["config"] if "config" in block else {})(x)
+            )
+        elif block["t"] == "rnn":
+            tensors.append(rnn.block(**block["config"] if "config" in block else {})(x))
+        elif block["t"] == "zip":
+            tensors.append(
+                base.zip_merge(**block["config"] if "config" in block else {})(x)
+            )
+
+        if "output" in block and block["ouput"] is True:
+            if isinstance(tensors[-1], list):
+                output_tensors += tensors[-1]
+            else:
+                output_tensors.append(tensors[-1])
+
+    if len(output_tensors) == 0:
+        if isinstance(tensors[-1], list):
+            output_tensors += tensors[-1]
+        else:
+            output_tensors.append(tensors[-1])
+
+    # outputs
+    model_outputs, loss, metrics = outputs.build(output_tensors, shortcuts=shortcuts)
+
+    # Model
+    model = Model(inputs=model_inputs, outputs=model_outputs, name=name)
+    model.compile(
+        loss=loss,
+        optimizer=optimizer,
+        metrics=metrics,
+        loss_weights=loss_weights,
+        sample_weight_mode=sample_weight_mode,
+        weighted_metrics=weighted_metrics,
+        target_tensors=target_tensors,
+    )
+    return model
 
 
 @ingredient.capture

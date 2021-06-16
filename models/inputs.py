@@ -20,17 +20,17 @@
 
 from tensorflow.keras.layers import Embedding, Input
 from tensorflow.keras.layers import deserialize as deserialize_layer
-from tensorflow.python.framework.ops import Tensor
+from tensorflow.python.keras.engine.keras_tensor import KerasTensor
 from typing import Dict, List, Tuple
 
+from .base import merge
 from .ingredient import ingredient
-from .merge_layer import merge_layer
 
 
 @ingredient.capture
-def get(
+def build(
     inputs: List[Dict], layers: Dict, *args, **kwargs
-) -> Tuple[List[Tensor], List[Tensor]]:
+) -> Tuple[List[KerasTensor], List[KerasTensor]]:
     """Transform config to model inputs."""
     model_inputs = []
     xs = []
@@ -79,17 +79,16 @@ def get(
                 model_inputs.append(x)
                 xs.append(x)
         elif _input["t"] == "merge":
-            _ins, _xs = get(_input["inputs"], tensors=tensors, *args, **kwargs)
+            _ins, _xs = build(_input["inputs"], tensors=tensors, *args, **kwargs)
             model_inputs += _ins
 
             xs += [
-                merge_layer(
-                    _xs,
+                merge(
                     t=_input["merge"]["t"],
                     config=_input["merge"]["config"]
                     if "config" in _input["merge"]
                     else {},
-                )
+                )(_xs)
             ]
 
     return model_inputs, xs
