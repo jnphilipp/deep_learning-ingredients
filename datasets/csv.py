@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# vim: ft=python fileencoding=utf-8 sts=4 sw=4 et:
 # Copyright (C) 2019-2021 J. Nathanael Philipp (jnphilipp) <nathanael@philipp.land>
 #
 # This file is part of deep_learning-ingredients.
@@ -91,25 +92,32 @@ def load(
         for row in reader:
             if id_fieldname and id_fieldname in row:
                 ids.append(row[id_fieldname])
-            for field in x_fieldnames:
-                if field in row:
-                    x[field].append(
-                        transform(
-                            row[field],
-                            x_append_one,
-                            vocab if field in vocab_fieldnames else None,
-                            dtype[field] if isinstance(dtype, dict) else dtype,
+            try:
+                for field in x_fieldnames:
+                    if field in row:
+                        x[field].append(
+                            transform(
+                                row[field],
+                                x_append_one,
+                                vocab if field in vocab_fieldnames else None,
+                                dtype[field] if isinstance(dtype, dict) else dtype,
+                            )
                         )
-                    )
-            for field in y_fieldnames:
-                if field in row:
-                    y[field].append(
-                        transform(
-                            row[field],
-                            y_append_one,
-                            vocab if field in vocab_fieldnames else None,
-                            dtype[field] if isinstance(dtype, dict) else dtype,
+                for field in y_fieldnames:
+                    if field in row:
+                        y[field].append(
+                            transform(
+                                row[field],
+                                y_append_one,
+                                vocab if field in vocab_fieldnames else None,
+                                dtype[field] if isinstance(dtype, dict) else dtype,
+                            )
                         )
-                    )
+            except Exception as e:
+                _log.error(
+                    f"Couldn't transform {field} field in row "
+                    + f"{ids[-1] if id_fieldname and id_fieldname in row else row}."
+                )
+                raise e
 
     return ids, x, y
