@@ -17,29 +17,26 @@
 # You should have received a copy of the GNU General Public License
 # along with deep_learning-ingredients. If not, see
 # <http://www.gnu.org/licenses/>.
-"""Deep learning Ingredients."""
+"""Decorators."""
 
-from . import callbacks
-from . import datasets
-from . import decorators
-from . import experiments
-from . import history
-from . import models
-from . import optimizers
-from . import paths
-from . import plots
-from .vocab import Vocab
+import time
+
+from functools import wraps
+from typing import Callable, Tuple
 
 
-__all__ = (
-    "callbacks",
-    "datasets",
-    "decorators",
-    "experiments",
-    "history",
-    "models",
-    "optimizers",
-    "paths",
-    "plots",
-    "Vocab",
-)
+def runtime(func: Callable) -> Callable:
+    """Runtime decorator."""
+
+    @wraps(func)
+    def func_wrapper(*args, **kwargs) -> Tuple:
+        start_time = int(round(time.time() * 1000))
+        values = func(*args, **kwargs)
+        runtime = (int(round(time.time() * 1000)) - start_time) / 1000.0
+        if type(values) == tuple:
+            values += (runtime,)
+        else:
+            values = (values, runtime)
+        return values
+
+    return func_wrapper
