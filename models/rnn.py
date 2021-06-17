@@ -22,7 +22,7 @@
 from tensorflow.keras.layers import Bidirectional, Layer
 from tensorflow.keras.layers import deserialize as deserialize_layer
 from tensorflow.python.keras.engine.keras_tensor import KerasTensor
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Union
 
 from .ingredient import ingredient
 
@@ -50,11 +50,11 @@ def block(
         else:
             _layers[i] = deserialize_layer(rnn_layer)
 
-    def _block(tensors: List[KerasTensor]) -> List[KerasTensor]:
-        xs = [None for i in tensors]
+    def _block(tensors: List[KerasTensor]) -> Union[KerasTensor, List[KerasTensor]]:
+        _tensors = [None for i in tensors]
         for i in range(nb_layers):
-            for j, x in enumerate(xs):
-                xs[j] = _layers[i](tensors[j] if x is None else x)
-        return xs
+            for j, x in enumerate(_tensors):
+                _tensors[j] = _layers[i](tensors[j] if x is None else x)
+        return _tensors if len(_tensors) > 1 else _tensors[0]
 
     return _block
