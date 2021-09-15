@@ -130,6 +130,10 @@ def build(
             tensors.append(
                 dense.block(**block["config"] if "config" in block else {})(x)
             )
+        elif block["t"] == "flatten":
+            tensors.append(
+                base.flatten(**block["config"] if "config" in block else {})(x)
+            )
         elif block["t"] == "merge":
             tensors.append(
                 base.merge(**block["config"] if "config" in block else {})(x)
