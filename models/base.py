@@ -24,6 +24,7 @@ from tensorflow.keras.layers import (
     Average,
     Concatenate,
     Dot,
+    Flatten,
     Layer,
     Maximum,
     Minimum,
@@ -127,3 +128,19 @@ def reshape(target_shape: Iterable[int], **kwargs) -> Callable:
         return xs if len(xs) > 1 else xs[0]
 
     return _reshape
+
+
+@ingredient.capture(prefix="flatten")
+def flatten(**kwargs) -> Callable:
+    """Get flatten layer from config."""
+    flatten_layer = Flatten(**kwargs)
+
+    def _flatten(
+        tensors: Union[KerasTensor, List[KerasTensor]]
+    ) -> Union[KerasTensor, List[KerasTensor]]:
+        xs = []
+        for j, x in enumerate([tensors] if not isinstance(tensors, list) else tensors):
+            xs.append(flatten_layer(x))
+        return xs if len(xs) > 1 else xs[0]
+
+    return _flatten
