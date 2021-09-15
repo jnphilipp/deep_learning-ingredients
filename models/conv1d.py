@@ -46,7 +46,7 @@ def block(
         if connection_type == "base":
             _layers[i] = layer(filters=filters)
         elif connection_type == "densely":
-            _layers[i] = (layer(), Concatenate(axis=concat_axis))
+            _layers[i] = (layer(densley=True), Concatenate(axis=concat_axis))
 
     def _block(
         tensors: Union[KerasTensor, List[KerasTensor]]
@@ -84,12 +84,15 @@ def layer(
     dropout: Dict = None,
     filters: Optional[int] = None,
     k: Optional[int] = None,
+    densley: bool = False,
 ) -> Callable:
     """Get conv1d layer from config."""
     if filters is not None:
         conv1d = dict(conv1d, **{"filters": filters})
     elif k is not None:
         conv1d = dict(conv1d, **{"filters": k})
+    if densley:
+        conv1d = dict(conv1d, **{"padding": "same"})
 
     conv1d_layer = Conv1D.from_config(conv1d)
     if dropout and dropout["t"] == "layerwise":
