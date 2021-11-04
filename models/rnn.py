@@ -50,11 +50,17 @@ def block(
         else:
             _layers[i] = deserialize_layer(rnn_layer)
 
-    def _block(tensors: List[KerasTensor]) -> Union[KerasTensor, List[KerasTensor]]:
-        _tensors = [None for i in tensors]
+    def _block(
+        tensors: Union[KerasTensor, List[KerasTensor]]
+    ) -> Union[KerasTensor, List[KerasTensor]]:
+        _tensors = [None] if not isinstance(tensors, list) else [None for i in tensors]
         for i in range(nb_layers):
             for j, x in enumerate(_tensors):
-                _tensors[j] = _layers[i](tensors[j] if x is None else x)
+                _tensors[j] = _layers[i](
+                    (tensors if not isinstance(tensors, list) else tensors[j])
+                    if x is None
+                    else x
+                )
         return _tensors if len(_tensors) > 1 else _tensors[0]
 
     return _block
