@@ -42,8 +42,8 @@ def load(
     id_fieldname: Optional[str] = "id",
     vocab: Optional[Vocab] = None,
     vocab_fieldnames: List[str] = [],
-    x_append_one: bool = True,
-    y_append_one: bool = False,
+    x_append_one: Union[bool, List[str]] = True,
+    y_append_one: Union[bool, List[str]] = False,
     dtype: Union[type, Dict[str, type]] = np.uint,
 ) -> Tuple[List[str], Dict[str, List[np.ndarray]], Dict[str, List[np.ndarray]]]:
     """Load data from csv."""
@@ -98,7 +98,9 @@ def load(
                         x[field].append(
                             transform(
                                 row[field],
-                                x_append_one,
+                                x_append_one
+                                if isinstance(x_append_one, bool)
+                                else (field in x_append_one),
                                 vocab if field in vocab_fieldnames else None,
                                 dtype[field] if isinstance(dtype, dict) else dtype,
                             )
@@ -108,7 +110,9 @@ def load(
                         y[field].append(
                             transform(
                                 row[field],
-                                y_append_one,
+                                y_append_one
+                                if isinstance(y_append_one, bool)
+                                else (field in y_append_one),
                                 vocab if field in vocab_fieldnames else None,
                                 dtype[field] if isinstance(dtype, dict) else dtype,
                             )
