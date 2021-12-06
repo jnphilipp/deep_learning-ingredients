@@ -29,6 +29,7 @@ from tensorflow.keras.layers import (
     Maximum,
     Minimum,
     Multiply,
+    RepeatVector,
     Reshape,
     Subtract,
 )
@@ -144,3 +145,19 @@ def flatten(**kwargs) -> Callable:
         return xs if len(xs) > 1 else xs[0]
 
     return _flatten
+
+
+@ingredient.capture(prefix="repeat_vector")
+def repeat_vector(n: int, **kwargs) -> Callable:
+    """Get repeat vector layer from config."""
+    repeat_vector_layer = RepeatVector(n, **kwargs)
+
+    def _repeat_vector(
+        tensors: Union[KerasTensor, List[KerasTensor]]
+    ) -> Union[KerasTensor, List[KerasTensor]]:
+        xs = []
+        for j, x in enumerate([tensors] if not isinstance(tensors, list) else tensors):
+            xs.append(repeat_vector_layer(x))
+        return xs if len(xs) > 1 else xs[0]
+
+    return _repeat_vector

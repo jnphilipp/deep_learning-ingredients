@@ -138,6 +138,10 @@ def build(
             tensors.append(
                 base.merge(**block["config"] if "config" in block else {})(x)
             )
+        elif block["t"] == "repeat_vector":
+            tensors.append(
+                base.repeat_vector(**block["config"] if "config" in block else {})(x)
+            )
         elif block["t"] == "reshape":
             tensors.append(
                 base.reshape(**block["config"] if "config" in block else {})(x)
