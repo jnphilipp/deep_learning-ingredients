@@ -266,6 +266,14 @@ def summary(_log: Logger):
 
 
 @ingredient.command
+def to_json(_log: Logger):
+    """Model(s) to_json command."""
+    _log.info("Print model.to_json().")
+    model = get()
+    _log.info(model.to_json())
+
+
+@ingredient.command
 def plot(_log: Logger, _run: Run):
     """Plot model(s) command."""
     model = get()
