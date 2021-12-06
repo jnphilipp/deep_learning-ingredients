@@ -20,6 +20,7 @@
 """Core module of models ingredient."""
 
 import os
+import re
 import sys
 
 from ingredients import optimizers
@@ -102,6 +103,13 @@ def build(
                 x = tensors[block["inputs"]]
             elif isinstance(block["inputs"], str) and block["inputs"] == "inputs":
                 x = input_tensors
+            elif isinstance(block["inputs"], str):
+                if re.match(r"input-\d+", block["inputs"]):
+                    x = input_tensors[int(block["inputs"].split("-")[1])]
+                else:
+                    raise RuntimeError(
+                        f"Unkown block input configuration: {block['inputs']}."
+                    )
             elif isinstance(block["inputs"], Iterable):
                 x = []
                 for j in block["inputs"]:
@@ -110,6 +118,12 @@ def build(
                     elif isinstance(j, str):
                         if j == "inputs":
                             x.append(input_tensors)
+                        elif re.match(r"input-\d+", j):
+                            x.append(input_tensors[int(j.split("-")[1])])
+                        else:
+                            raise RuntimeError(
+                                f"Unkown block input configuration: {j}."
+                            )
         elif len(tensors) == 0:
             x = input_tensors
         else:
