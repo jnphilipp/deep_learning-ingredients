@@ -25,7 +25,7 @@ import os
 from logging import Logger
 from itertools import chain
 from sacred import Ingredient
-from tensorflow.keras.utils import Sequence
+from tensorflow.keras.utils import Sequence, to_categorical
 from typing import Dict, List, Optional, Tuple, Union
 
 from . import csv, json
@@ -50,6 +50,7 @@ class TextSequence(Sequence):
         mode: str = "separate",
         shuffle: bool = True,
         vocab: Optional[Vocab] = None,
+        to_categorical_fields: Dict[str, int] = dict(),
     ):
         """Create a new text sequence."""
         assert mode in ["separate", "concat"]
@@ -63,6 +64,7 @@ class TextSequence(Sequence):
         self.mode = mode
         self.shuffle = shuffle
         self.vocab = vocab
+        self.to_categorical_fields = to_categorical_fields
 
         self.size = len(self.x[list(self.x.keys())[0]][1])
 
@@ -128,6 +130,12 @@ class TextSequence(Sequence):
                     for k in self.x.keys():
                         bw[k][i, 0 : len(self.x[k][1][self.index_array[j]])] = 1
 
+            for k, v in self.to_categorical_fields.items():
+                if k in bx:
+                    bx[k] = to_categorical(bx[k], v)
+                if k in by:
+                    by[k] = to_categorical(by[k], v)
+
             if self.sample_weights:
                 return bx, by, bw
             else:
@@ -184,6 +192,7 @@ def get(
     id_fieldname: Optional[str] = "id",
     vocab_path: Optional[str] = None,
     vocab_fieldnames: List[str] = [],
+    to_categorical_fields: Dict[str, int] = dict(),
     single_sequence: bool = False,
     shuffle: bool = True,
 ) -> Union[TextSequence, Tuple[TextSequence, TextSequence]]:
@@ -193,6 +202,7 @@ def get(
         validation_split >= 0.0 and validation_split <= 1.0
     )
 
+    to_categorical_fieldnames = dict()
     vocab = None
     if vocab_path:
         if os.path.isfile(paths.join("{datasets_dir}", dataset)):
@@ -203,7 +213,10 @@ def get(
     if os.path.isfile(paths.join("{datasets_dir}", dataset)):
         train_csv = paths.join("{datasets_dir}", dataset)
     else:
-        train_csv = paths.join("{datasets_dir}", dataset, "train.csv")
+        if os.path.exists(paths.join("{datasets_dir}", dataset, "train.csv")):
+            train_csv = paths.join("{datasets_dir}", dataset, "train.csv")
+        elif os.path.exists(paths.join("{datasets_dir}", dataset, "train.csv.gz")):
+            train_csv = paths.join("{datasets_dir}", dataset, "train.csv.gz")
     tids, tx, ty = csv.load(
         train_csv,
         x_fieldnames,
@@ -218,15 +231,22 @@ def get(
     train_x = {}
     for k in tx.keys():
         if tx[k]:
+            if k in to_categorical_fields:
+                to_categorical_fieldnames[f"input_{k}"] = to_categorical_fields[k]
             max_len = max([len(i) for i in tx[k]])
             train_x[k if k.startswith("input_") else f"input_{k}"] = (max_len, tx[k])
     train_y = {}
     for k in ty.keys():
         if ty[k]:
+            if k in to_categorical_fields:
+                to_categorical_fieldnames[f"output_{k}"] = to_categorical_fields[k]
             max_len = max([len(i) for i in ty[k]])
             train_y[k if k.startswith("output_") else f"output_{k}"] = (max_len, ty[k])
 
-    val_csv = paths.join("{datasets_dir}", dataset, "val.csv")
+    if os.path.exists(paths.join("{datasets_dir}", dataset, "val.csv")):
+        val_csv = paths.join("{datasets_dir}", dataset, "val.csv")
+    elif os.path.exists(paths.join("{datasets_dir}", dataset, "val.csv.gz")):
+        val_csv = paths.join("{datasets_dir}", dataset, "val.csv.gz")
     if os.path.exists(val_csv):
         vids, vx, vy = csv.load(
             val_csv,
@@ -282,6 +302,7 @@ def get(
                 mode,
                 shuffle,
                 vocab,
+                to_categorical_fieldnames,
             )
         else:
             _log.info(
@@ -300,6 +321,7 @@ def get(
                     mode,
                     shuffle,
                     vocab,
+                    to_categorical_fieldnames,
                 ),
                 TextSequence(
                     val_x,
@@ -311,6 +333,7 @@ def get(
                     mode,
                     shuffle,
                     vocab,
+                    to_categorical_fieldnames,
                 ),
             )
     else:
@@ -344,7 +367,16 @@ def get(
                 train_y[k] = (train_y[k][0], [train_y[k][1][i] for i in per[0:idx]])
 
             return TextSequence(
-                train_x, train_y, _rnd, tids, batch_size, sample_weights, mode
+                train_x,
+                train_y,
+                _rnd,
+                tids,
+                batch_size,
+                sample_weights,
+                mode,
+                shuffle,
+                vocab,
+                to_categorical_fieldnames,
             ), TextSequence(
                 val_x,
                 val_y,
@@ -355,6 +387,7 @@ def get(
                 mode,
                 shuffle,
                 vocab,
+                to_categorical_fieldnames,
             )
         else:
             _log.info(f"Run on {len(train_x[list(train_x.keys())[0]][1])} samples.")
@@ -368,4 +401,5 @@ def get(
                 mode,
                 shuffle,
                 vocab,
+                to_categorical_fieldnames,
             )
