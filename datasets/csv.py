@@ -19,11 +19,13 @@
 # <http://www.gnu.org/licenses/>.
 """datasets.csv ingredient."""
 
+import gzip
 import numpy as np
 
 from csv import DictReader
 from logging import Logger
 from sacred import Ingredient
+from tensorflow.keras.utils import to_categorical
 from typing import Dict, List, Optional, Tuple, Union
 
 from .. import paths
@@ -42,6 +44,7 @@ def load(
     id_fieldname: Optional[str] = "id",
     vocab: Optional[Vocab] = None,
     vocab_fieldnames: List[str] = [],
+    to_categorical_fieldnames: List[str] = [],
     x_append_one: Union[bool, List[str]] = True,
     y_append_one: Union[bool, List[str]] = False,
     dtype: Union[type, Dict[str, type]] = np.uint,
@@ -87,41 +90,53 @@ def load(
     ids = []
     x: Dict[str, List[np.ndarray]] = {k: [] for k in x_fieldnames}
     y: Dict[str, List[np.ndarray]] = {k: [] for k in y_fieldnames}
-    with open(paths.join(path), "r", encoding="utf8") as f:
-        reader = DictReader(f, dialect="unix")
-        for row in reader:
-            if id_fieldname and id_fieldname in row:
-                ids.append(row[id_fieldname])
-            try:
-                for field in x_fieldnames:
-                    if field in row:
-                        x[field].append(
-                            transform(
-                                row[field],
-                                x_append_one
-                                if isinstance(x_append_one, bool)
-                                else (field in x_append_one),
-                                vocab if field in vocab_fieldnames else None,
-                                dtype[field] if isinstance(dtype, dict) else dtype,
-                            )
+
+    if path.endswith(".gz"):
+        f = gzip.open(paths.join(path), "rt", encoding="utf8")
+    else:
+        f = open(paths.join(path), "rt", encoding="utf8")
+    reader = DictReader(f, dialect="unix")
+    for row in reader:
+        if id_fieldname and id_fieldname in row:
+            ids.append(row[id_fieldname])
+        try:
+            for field in x_fieldnames:
+                if field in row:
+                    x[field].append(
+                        transform(
+                            row[field],
+                            x_append_one
+                            if isinstance(x_append_one, bool)
+                            else (field in x_append_one),
+                            vocab if field in vocab_fieldnames else None,
+                            dtype[field] if isinstance(dtype, dict) else dtype,
                         )
-                for field in y_fieldnames:
-                    if field in row:
-                        y[field].append(
-                            transform(
-                                row[field],
-                                y_append_one
-                                if isinstance(y_append_one, bool)
-                                else (field in y_append_one),
-                                vocab if field in vocab_fieldnames else None,
-                                dtype[field] if isinstance(dtype, dict) else dtype,
-                            )
+                    )
+            for field in y_fieldnames:
+                if field in row:
+                    y[field].append(
+                        transform(
+                            row[field],
+                            y_append_one
+                            if isinstance(y_append_one, bool)
+                            else (field in y_append_one),
+                            vocab if field in vocab_fieldnames else None,
+                            dtype[field] if isinstance(dtype, dict) else dtype,
                         )
-            except Exception as e:
-                _log.error(
-                    f"Couldn't transform {field} field in row "
-                    + f"{ids[-1] if id_fieldname and id_fieldname in row else row}."
-                )
-                raise e
+                    )
+        except Exception as e:
+            _log.error(
+                f"Couldn't transform {field} field in row "
+                + f"{ids[-1] if id_fieldname and id_fieldname in row else row}."
+            )
+            f.close()
+            raise e
+    f.close()
+
+    for field in to_categorical_fieldnames:
+        if field in x:
+            x[field] = to_categorical(x[field])
+        if field in y:
+            y[field] = to_categorical(y[field])
 
     return ids, x, y
