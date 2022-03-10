@@ -74,10 +74,15 @@ def load(
                 + ([1] if append_one else []),
                 dtype=dtype,
             )
-        else:
+        elif ";" in field and "," not in field:
             return np.array(
                 [(vocab.get(i) if vocab else i) for i in field.split(";") if i]
                 + ([1] if append_one else []),
+                dtype=dtype,
+            )
+        else:
+            return np.array(
+                [(vocab.get(field) if vocab else field)] + ([1] if append_one else []),
                 dtype=dtype,
             )
 
