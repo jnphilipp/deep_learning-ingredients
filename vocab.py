@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with deep_learning-ingredients. If not, see
 # <http://www.gnu.org/licenses/>.
+"""Vocab."""
 
 import json
 
@@ -23,29 +24,40 @@ from typing import Dict, List
 
 
 class Vocab:
+    """Vocab."""
+
     def __init__(self, num_special: int):
+        """Init."""
         self._num_special = num_special
         self._values: Dict[str, int] = {}
         self._rvalues: Dict[int, str] = {}
 
     def __len__(self) -> int:
+        """Length."""
         if len(self._values) == 0:
             return 0
         else:
             return len(self._values) + self._num_special
 
     def add(self, k: str):
+        """Add."""
         if k not in self._values.keys():
             self._values[k] = len(self._values) + self._num_special
             self._rvalues[self.get(k)] = k
 
     def get(self, k: str) -> int:
+        """Get."""
         return self._values[k]
 
-    def rget(self, k: int) -> str:
-        return self._rvalues[k]
+    def rget(self, k: int, out_of_vocab_sign: str = "") -> str:
+        """Reverse get."""
+        if k in self._rvalues:
+            return self._rvalues[k]
+        else:
+            return out_of_vocab_sign
 
     def translate(self, text: str) -> List[int]:
+        """Translate."""
         s = ""
         translated: List[int] = []
         for c in text:
@@ -66,6 +78,7 @@ class Vocab:
         return translated
 
     def rtranslate(self, text: List[int], out_of_vocab_sign: str = "") -> str:
+        """Reverse translate."""
         translated = ""
         for c in text:
             if c in self._rvalues.keys():
@@ -76,6 +89,7 @@ class Vocab:
 
     @classmethod
     def load(cls, path: str) -> "Vocab":
+        """Load from file."""
         min_idx = None
         data: Dict[str, int] = {}
         rdata: Dict[int, str] = {}
