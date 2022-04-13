@@ -1,20 +1,18 @@
 fail_fast: true
 repos:
--   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.931
-    hooks:
-    -   id: mypy
-        exclude: migrations/
 -   repo: https://github.com/psf/black
-    rev: 22.1.0
+    rev: 22.3.0
     hooks:
     - id: black
       language_version: python3
-      exclude: migrations/
 -   repo: https://gitlab.com/pycqa/flake8
     rev: 4.0.1
     hooks:
     -   id: flake8
-        exclude: (migrations/|tests)
+        exclude: (tests)
         additional_dependencies: [pep8-naming, flake8-docstrings]
-        args: [--max-line-length=88, "--extend-ignore=E203"]
+        args: [--max-line-length=88, "--extend-ignore=E203,F841"]
+-   repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v0.942
+    hooks:
+    -   id: mypy

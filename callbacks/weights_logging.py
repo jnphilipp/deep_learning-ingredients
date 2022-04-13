@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2019-2021 J. Nathanael Philipp (jnphilipp) <nathanael@philipp.land>
+# vim: ft=python fileencoding=utf-8 sts=4 sw=4 et:
+# Copyright (C) 2019-2022 J. Nathanael Philipp (jnphilipp) <nathanael@philipp.land>
 #
 # This file is part of deep_learning-ingredients.
 #
-# deep_learning-ingredients is free software: you can redistribute it and/or
-# modify it under the terms of the GNU General Public License as published by
+# deep_learning-ingredients is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
@@ -14,17 +15,20 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with deep_learning-ingredients. If not, see
-# <http://www.gnu.org/licenses/>.
+# along with deep_learning-ingredients. If not, see <http://www.gnu.org/licenses/>.
+"""Weights logging callback."""
 
 from csv import DictWriter
 from tensorflow.keras.callbacks import Callback
 
 
 class WeightsLogging(Callback):
+    """Weights logging callback."""
+
     def __init__(self, mode="epochs", path=None):
+        """Init."""
         assert mode in ["batches", "epochs"]
-        super(WeightsLogging, self).__init__()
+        super().__init__()
         self.mode = mode
         self.path = path
         self.weights_history = {"mode": self.mode, "layers": []}
@@ -48,15 +52,18 @@ class WeightsLogging(Callback):
             writer.writerow(row)
 
     def on_train_begin(self, logs=None):
+        """On train begin."""
         self.fields = [self.mode] + [layer.name for layer in self.model.layers]
         with open(self.path, "w", encoding="utf8") as f:
             writer = DictWriter(f, self.fields, dialect="unix")
             writer.writeheader()
 
     def on_train_batch_end(self, batch, logs=None):
+        """On train batch end."""
         if self.mode == "batches":
             self._log_weights(batch)
 
     def on_epoch_end(self, epoch, logs=None):
+        """On epoch end."""
         if self.mode == "epochs":
             self._log_weights(epoch)
