@@ -82,7 +82,7 @@ class TextSequence(Sequence):
             self.index_array = np.array(range(self.size))
 
     def __len__(self) -> int:
-        """Steps per epoch."""
+        """Steps per epoch."""  # noqa: D401
         return math.ceil(self.size / self.batch_size)
 
     def __getitem__(
@@ -248,7 +248,9 @@ def get(
         val_csv = paths.join("{datasets_dir}", dataset, "val.csv")
     elif os.path.exists(paths.join("{datasets_dir}", dataset, "val.csv.gz")):
         val_csv = paths.join("{datasets_dir}", dataset, "val.csv.gz")
-    if os.path.exists(val_csv):
+    else:
+        val_csv = None
+    if val_csv is not None and os.path.exists(val_csv):
         vids, vx, vy = csv.load(
             val_csv,
             x_fieldnames,
