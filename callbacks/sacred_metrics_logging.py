@@ -20,7 +20,7 @@
 
 from sacred.run import Run
 from tensorflow.keras.callbacks import Callback
-from typing import Dict
+from typing import Dict, Optional
 
 
 class SacredMetricsLogging(Callback):
@@ -31,8 +31,8 @@ class SacredMetricsLogging(Callback):
         super().__init__()
         self.run = run
 
-    def on_epoch_end(self, epoch: int, logs: Dict = None):
+    def on_epoch_end(self, epoch: int, logs: Optional[Dict] = None):
         """On epoch end."""
-        if logs:
+        if logs is not None:
             for k, v in logs.items():
                 self.run.log_scalar(k, v, epoch)
