@@ -104,6 +104,8 @@ def load(
     for row in reader:
         if id_fieldname and id_fieldname in row:
             ids.append(row[id_fieldname])
+        else:
+            ids.append(len(ids))
         try:
             for field in x_fieldnames:
                 if field in row:
