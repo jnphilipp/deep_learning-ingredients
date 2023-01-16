@@ -196,7 +196,7 @@ def get(
     to_categorical_fields: Dict[str, int] = dict(),
     single_sequence: bool = False,
     shuffle: bool = True,
-) -> Union[TextSequence, Tuple[TextSequence, TextSequence]]:
+) -> Tuple[TextSequence, Optional[TextSequence]]:
     """Get text sequenc(s) from csv data."""
     assert mode in ["separate", "concat"]
     assert validation_split is None or (
@@ -295,17 +295,20 @@ def get(
 
             _log.info(f"Train on {len(train_x[list(train_x.keys())[0]][1])} samples.")
 
-            return TextSequence(
-                train_x,
-                train_y,
-                _rnd,
-                tids,
-                batch_size,
-                sample_weights,
-                mode,
-                shuffle,
-                vocab,
-                to_categorical_fieldnames,
+            return (
+                TextSequence(
+                    train_x,
+                    train_y,
+                    _rnd,
+                    tids,
+                    batch_size,
+                    sample_weights,
+                    mode,
+                    shuffle,
+                    vocab,
+                    to_categorical_fieldnames,
+                ),
+                None,
             )
         else:
             _log.info(
@@ -394,15 +397,18 @@ def get(
             )
         else:
             _log.info(f"Run on {len(train_x[list(train_x.keys())[0]][1])} samples.")
-            return TextSequence(
-                train_x,
-                train_y,
-                _rnd,
-                tids,
-                batch_size,
-                sample_weights,
-                mode,
-                shuffle,
-                vocab,
-                to_categorical_fieldnames,
+            return (
+                TextSequence(
+                    train_x,
+                    train_y,
+                    _rnd,
+                    tids,
+                    batch_size,
+                    sample_weights,
+                    mode,
+                    shuffle,
+                    vocab,
+                    to_categorical_fieldnames,
+                ),
+                None,
             )
